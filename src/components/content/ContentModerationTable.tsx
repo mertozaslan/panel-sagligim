@@ -44,6 +44,17 @@ export default function ContentModerationTable({
     return <MessageSquare className="h-4 w-4" />;
   };
 
+  const getItemTitle = (item: ContentItem): string => {
+    if ('title' in item) return item.title;
+    if ('content' in item) return item.content.substring(0, 50) + '...';
+    return 'Başlık yok';
+  };
+
+  const getItemCategory = (item: ContentItem): string => {
+    if ('category' in item) return item.category;
+    return 'Genel';
+  };
+
   const getStatusBadge = (status: string) => {
     const statusClasses = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -151,7 +162,7 @@ export default function ContentModerationTable({
                         </span>
                       </div>
                       <p className="text-sm font-medium text-gray-900 mt-1">
-                        {item.title}
+                        {getItemTitle(item)}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">
                         {truncateText(item.content)}
@@ -175,7 +186,7 @@ export default function ContentModerationTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {getCategoryBadge(item.category)}
+                  {getCategoryBadge(getItemCategory(item))}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="flex items-center">

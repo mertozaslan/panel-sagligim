@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuthStore } from '@/stores/authStore';
 
 const navigation = [
   {
@@ -29,8 +30,7 @@ const navigation = [
     href: '/users',
     icon: Users,
     children: [
-      { name: 'Normal Kullanıcılar', href: '/users' },
-      { name: 'Uzmanlar', href: '/users/experts' },
+      { name: 'Kullanıcılar', href: '/users' },
       { name: 'Uzman Başvuruları', href: '/users/expert-applications' },
     ]
   },
@@ -63,6 +63,7 @@ interface SidebarProps {
 export default function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuthStore();
 
   return (
     <>
@@ -145,10 +146,16 @@ export default function Sidebar({ className }: SidebarProps) {
           {/* Footer */}
           <div className="px-6 py-4 border-t">
             <div className="flex items-center">
-              <div className="h-8 w-8 bg-gray-300 rounded-full"></div>
+              <div className="h-8 w-8 bg-health-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-white">
+                  {user?.firstName?.charAt(0) || 'U'}
+                </span>
+              </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">Admin User</p>
-                <p className="text-xs text-gray-500">admin@saglikhep.com</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
             </div>
           </div>

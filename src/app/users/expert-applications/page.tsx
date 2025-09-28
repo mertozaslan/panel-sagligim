@@ -1,150 +1,125 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Expert, Document } from '@/types';
+import { useDoctorsStore } from '@/stores/doctorsStore';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
   Search, 
-  Filter, 
-  Download, 
-  Calendar, 
   CheckCircle,
   XCircle,
   Eye,
-  FileText,
-  ExternalLink,
-  Clock
+  Clock,
+  AlertCircle,
+  User,
+  Mail,
+  Calendar,
+  FileText
 } from 'lucide-react';
-import { clsx } from 'clsx';
-
-// Mock data for expert applications
-const mockApplications: Expert[] = [
-  {
-    id: '1',
-    name: 'Dr. Fatma Özkan',
-    email: 'dr.fatma@email.com',
-    role: 'expert',
-    status: 'pending',
-    createdAt: new Date('2024-01-18'),
-    specializations: [
-      { id: '1', name: 'Dermatoloji', category: 'dermatology' }
-    ],
-    certifications: [
-      { id: '1', title: 'Dermatoloji Uzmanı', institution: 'İstanbul Üniversitesi', year: 2020, verified: false }
-    ],
-    experience: 4,
-    rating: 0,
-    totalConsultations: 0,
-    verificationStatus: 'pending',
-    verificationDocuments: [
-      { id: '1', name: 'diploma.pdf', url: '/docs/diploma.pdf', type: 'diploma', uploadedAt: new Date('2024-01-18'), verified: false },
-      { id: '2', name: 'certificate.pdf', url: '/docs/certificate.pdf', type: 'certificate', uploadedAt: new Date('2024-01-18'), verified: false }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Dr. Okan Yılmaz',
-    email: 'dr.okan@email.com',
-    role: 'expert',
-    status: 'pending',
-    createdAt: new Date('2024-01-17'),
-    specializations: [
-      { id: '2', name: 'Pediatri', category: 'pediatrics' }
-    ],
-    certifications: [
-      { id: '2', title: 'Çocuk Doktoru', institution: 'Hacettepe Üniversitesi', year: 2018, verified: false }
-    ],
-    experience: 6,
-    rating: 0,
-    totalConsultations: 0,
-    verificationStatus: 'pending',
-    verificationDocuments: [
-      { id: '3', name: 'medical_license.pdf', url: '/docs/medical_license.pdf', type: 'license', uploadedAt: new Date('2024-01-17'), verified: false },
-      { id: '4', name: 'specialization.pdf', url: '/docs/specialization.pdf', type: 'certificate', uploadedAt: new Date('2024-01-17'), verified: false }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Dr. Elif Kaya',
-    email: 'dr.elif@email.com',
-    role: 'expert',
-    status: 'pending',
-    createdAt: new Date('2024-01-16'),
-    specializations: [
-      { id: '3', name: 'Beslenme ve Diyet', category: 'nutrition' }
-    ],
-    certifications: [
-      { id: '3', title: 'Diyetisyen', institution: 'Başkent Üniversitesi', year: 2019, verified: false }
-    ],
-    experience: 5,
-    rating: 0,
-    totalConsultations: 0,
-    verificationStatus: 'pending',
-    verificationDocuments: [
-      { id: '5', name: 'dietitian_cert.pdf', url: '/docs/dietitian_cert.pdf', type: 'certificate', uploadedAt: new Date('2024-01-16'), verified: false }
-    ]
-  }
-];
 
 export default function ExpertApplicationsPage() {
-  const [applications, setApplications] = useState<Expert[]>(mockApplications);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedApplication, setSelectedApplication] = useState<Expert | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const {
+    pendingDoctors,
+    pagination,
+    isLoading,
+    error,
+    searchTerm,
+    getPendingDoctors,
+    approveDoctor,
+    rejectDoctor,
+    setSearchTerm,
+    clearError,
+  } = useDoctorsStore();
 
-  const filteredApplications = applications.filter(app => {
-    const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.specializations.some(s => 
-                           s.name.toLowerCase().includes(searchTerm.toLowerCase())
-                         );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  // Sayfa yüklendiğinde onay bekleyen doktorları getir
+  useEffect(() => {
+    getPendingDoctors(currentPage, 10);
+  }, [currentPage, getPendingDoctors]);
+
+  // Filtrelenmiş doktorlar (client-side arama)
+  const filteredDoctors = pendingDoctors.filter(doctor => {
+    const fullName = `${doctor.firstName} ${doctor.lastName}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+                         doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doctor.username.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesSearch;
   });
 
-  const handleApproveApplication = (application: Expert) => {
-    setApplications(applications.filter(app => app.id !== application.id));
-    // TODO: Send approval API call
-    console.log('Approved:', application);
+  const handleApproveDoctor = async (doctor: any) => {
+    try {
+      await approveDoctor(doctor._id);
+      setShowDetailModal(false);
+    } catch (error) {
+      console.error('Doktor onaylama hatası:', error);
+    }
   };
 
-  const handleRejectApplication = (application: Expert) => {
-    setApplications(applications.filter(app => app.id !== application.id));
-    // TODO: Send rejection API call
-    console.log('Rejected:', application);
+  const handleRejectDoctor = async (doctor: any) => {
+    try {
+      await rejectDoctor(doctor._id, rejectionReason);
+      setShowRejectModal(false);
+      setShowDetailModal(false);
+      setRejectionReason('');
+    } catch (error) {
+      console.error('Doktor reddetme hatası:', error);
+    }
   };
 
-  const handleViewApplication = (application: Expert) => {
-    setSelectedApplication(application);
+  const handleViewDoctor = (doctor: any) => {
+    setSelectedDoctor(doctor);
     setShowDetailModal(true);
   };
 
-  const getDocumentIcon = (type: Document['type']) => {
-    return <FileText className="h-4 w-4" />;
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   return (
     <DashboardLayout 
-      title="Uzman Başvuruları"
-      subtitle="Onay bekleyen uzman başvurularını inceleyin ve değerlendirin"
+      title="Doktor Başvuruları"
+      subtitle="Onay bekleyen doktor başvurularını inceleyin ve değerlendirin"
     >
       <div className="space-y-6">
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-3" />
+            <div className="flex-1">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+            <button
+              onClick={clearError}
+              className="text-red-400 hover:text-red-600"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* Alert for pending applications */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Clock className="h-5 w-5 text-yellow-600 mr-2" />
-            <div>
-              <h3 className="text-sm font-medium text-yellow-800">
-                {applications.length} uzman başvurusu onayınızı bekliyor
-              </h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                Başvuruları en kısa sürede değerlendirerek süreci hızlandırın.
-              </p>
+        {pagination && pagination.totalPending > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 text-yellow-600 mr-2" />
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">
+                  {pagination.totalPending} doktor başvurusu onayınızı bekliyor
+                </h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Başvuruları en kısa sürede değerlendirerek süreci hızlandırın.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Search */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -154,7 +129,7 @@ export default function ExpertApplicationsPage() {
             </div>
             <input
               type="text"
-              placeholder="Başvuru ara..."
+              placeholder="Doktor ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-health-500 focus:border-transparent"
@@ -162,136 +137,188 @@ export default function ExpertApplicationsPage() {
           </div>
         </div>
 
-        {/* Applications Table */}
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Başvuran
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Uzmanlık Alanı
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Deneyim
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Belgeler
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Başvuru Tarihi
-                  </th>
-                  <th className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredApplications.map((application) => (
-                  <tr key={application.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-blue-600">
-                              {application.name.split(' ').map(n => n[0]).join('')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{application.name}</div>
-                          <div className="text-sm text-gray-500">{application.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {application.specializations.map((spec) => (
-                          <span
-                            key={spec.id}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"
-                          >
-                            {spec.name}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                        {application.experience} yıl
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-1">
-                        {application.verificationDocuments.map((doc) => (
-                          <span
-                            key={doc.id}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                            title={doc.name}
-                          >
-                            {getDocumentIcon(doc.type)}
-                          </span>
-                        ))}
-                        <span className="text-xs text-gray-500">
-                          {application.verificationDocuments.length} belge
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDistanceToNow(application.createdAt, { addSuffix: true, locale: tr })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewApplication(application)}
-                          className="text-indigo-600 hover:text-indigo-900 p-1"
-                          title="Detayları Görüntüle"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        
-                        <button
-                          onClick={() => handleApproveApplication(application)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Onayla"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
-
-                        <button
-                          onClick={() => handleRejectApplication(application)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Reddet"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-health-500 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600">Doktorlar yükleniyor...</p>
           </div>
+        ) : (
+          <>
+            {/* Doctors Table */}
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Doktor
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Uzmanlık
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Hastane
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Deneyim
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Başvuru Tarihi
+                      </th>
+                      <th className="relative px-6 py-3">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredDoctors.map((doctor) => (
+                      <tr key={doctor._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span className="text-sm font-medium text-blue-600">
+                                  {doctor.firstName.charAt(0)}{doctor.lastName.charAt(0)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {doctor.firstName} {doctor.lastName}
+                              </div>
+                              <div className="text-sm text-gray-500">@{doctor.username}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {doctor.doctorInfo.specialization || 'Belirtilmemiş'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {doctor.doctorInfo.hospital || 'Belirtilmemiş'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {doctor.doctorInfo.experience ? `${doctor.doctorInfo.experience} yıl` : 'Belirtilmemiş'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                            {formatDistanceToNow(new Date(doctor.createdAt), { addSuffix: true, locale: tr })}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleViewDoctor(doctor)}
+                              className="text-indigo-600 hover:text-indigo-900 p-1"
+                              title="Detayları Görüntüle"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            
+                            <button
+                              onClick={() => handleApproveDoctor(doctor)}
+                              className="text-green-600 hover:text-green-900 p-1"
+                              title="Onayla"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
 
-          {filteredApplications.length === 0 && (
-            <div className="text-center py-12">
-              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <div className="text-gray-500">Onay bekleyen uzman başvurusu bulunmuyor</div>
+                            <button
+                              onClick={() => {
+                                setSelectedDoctor(doctor);
+                                setShowRejectModal(true);
+                              }}
+                              className="text-red-600 hover:text-red-900 p-1"
+                              title="Reddet"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredDoctors.length === 0 && !isLoading && (
+                <div className="text-center py-12">
+                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <div className="text-gray-500">Onay bekleyen doktor başvurusu bulunmuyor</div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* Pagination */}
+            {pagination && (
+              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex-1 flex justify-between sm:hidden">
+                  <button 
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={!pagination.hasPrev}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Önceki
+                  </button>
+                  <button 
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!pagination.hasNext}
+                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Sonraki
+                  </button>
+                </div>
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      <span className="font-medium">{filteredDoctors.length}</span> doktor gösteriliyor
+                      {pagination.totalPending && (
+                        <span> (toplam {pagination.totalPending})</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <button 
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={!pagination.hasPrev}
+                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Önceki
+                      </button>
+                      <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                        {currentPage} / {pagination.totalPages}
+                      </span>
+                      <button 
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={!pagination.hasNext}
+                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Sonraki
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Detail Modal */}
-        {showDetailModal && selectedApplication && (
+        {showDetailModal && selectedDoctor && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-gray-900">
-                    Uzman Başvuru Detayları
+                    Doktor Başvuru Detayları
                   </h2>
                   <button
                     onClick={() => setShowDetailModal(false)}
@@ -309,88 +336,47 @@ export default function ExpertApplicationsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Ad Soyad</label>
-                      <p className="text-sm text-gray-900">{selectedApplication.name}</p>
+                      <p className="text-sm text-gray-900">{selectedDoctor.firstName} {selectedDoctor.lastName}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">E-posta</label>
-                      <p className="text-sm text-gray-900">{selectedApplication.email}</p>
+                      <p className="text-sm text-gray-900">{selectedDoctor.email}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Deneyim</label>
-                      <p className="text-sm text-gray-900">{selectedApplication.experience} yıl</p>
+                      <label className="block text-sm font-medium text-gray-700">Kullanıcı Adı</label>
+                      <p className="text-sm text-gray-900">@{selectedDoctor.username}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Başvuru Tarihi</label>
                       <p className="text-sm text-gray-900">
-                        {selectedApplication.createdAt.toLocaleDateString('tr-TR')}
+                        {new Date(selectedDoctor.createdAt).toLocaleDateString('tr-TR')}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Specializations */}
+                {/* Doctor Information */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Uzmanlık Alanları</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedApplication.specializations.map((spec) => (
-                      <span
-                        key={spec.id}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800"
-                      >
-                        {spec.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Certifications */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Sertifikalar</h3>
-                  <div className="space-y-3">
-                    {selectedApplication.certifications.map((cert) => (
-                      <div key={cert.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{cert.title}</h4>
-                            <p className="text-sm text-gray-600">{cert.institution}</p>
-                            <p className="text-sm text-gray-500">{cert.year}</p>
-                          </div>
-                          <span className={clsx(
-                            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                            cert.verified
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          )}>
-                            {cert.verified ? 'Doğrulandı' : 'Beklemede'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Documents */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Yüklenen Belgeler</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedApplication.verificationDocuments.map((doc) => (
-                      <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            {getDocumentIcon(doc.type)}
-                            <div className="ml-3">
-                              <p className="text-sm font-medium text-gray-900">{doc.name}</p>
-                              <p className="text-xs text-gray-500">
-                                {formatDistanceToNow(doc.uploadedAt, { addSuffix: true, locale: tr })}
-                              </p>
-                            </div>
-                          </div>
-                          <button className="text-indigo-600 hover:text-indigo-900">
-                            <ExternalLink className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Doktor Bilgileri</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Uzmanlık Alanı</label>
+                      <p className="text-sm text-gray-900">{selectedDoctor.doctorInfo.specialization || 'Belirtilmemiş'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Hastane</label>
+                      <p className="text-sm text-gray-900">{selectedDoctor.doctorInfo.hospital || 'Belirtilmemiş'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Deneyim</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedDoctor.doctorInfo.experience ? `${selectedDoctor.doctorInfo.experience} yıl` : 'Belirtilmemiş'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Konum</label>
+                      <p className="text-sm text-gray-900">{selectedDoctor.doctorInfo.location || 'Belirtilmemiş'}</p>
+                    </div>
                   </div>
                 </div>
 
@@ -398,8 +384,8 @@ export default function ExpertApplicationsPage() {
                 <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
                   <button
                     onClick={() => {
-                      handleRejectApplication(selectedApplication);
-                      setShowDetailModal(false);
+                      setSelectedDoctor(selectedDoctor);
+                      setShowRejectModal(true);
                     }}
                     className="inline-flex items-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
@@ -407,10 +393,7 @@ export default function ExpertApplicationsPage() {
                     Reddet
                   </button>
                   <button
-                    onClick={() => {
-                      handleApproveApplication(selectedApplication);
-                      setShowDetailModal(false);
-                    }}
+                    onClick={() => handleApproveDoctor(selectedDoctor)}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
@@ -421,7 +404,59 @@ export default function ExpertApplicationsPage() {
             </div>
           </div>
         )}
+
+        {/* Reject Modal */}
+        {showRejectModal && selectedDoctor && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Doktoru Reddet
+                </h2>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Red Sebebi (İsteğe bağlı)
+                  </label>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Red sebebini açıklayın..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    rows={4}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {rejectionReason.length}/500 karakter
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    onClick={() => {
+                      setShowRejectModal(false);
+                      setRejectionReason('');
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={() => handleRejectDoctor(selectedDoctor)}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reddet
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
 }
+

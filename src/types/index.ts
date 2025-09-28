@@ -6,7 +6,7 @@ export interface User {
   role: 'user' | 'expert' | 'admin';
   status: 'active' | 'blocked' | 'pending';
   createdAt: Date;
-  lastLoginAt?: Date;
+  lastLogin?: Date;
   profile?: UserProfile;
 }
 
@@ -155,20 +155,29 @@ export interface Event {
   id: string;
   title: string;
   description: string;
-  organizerId: string;
-  organizer: User;
-  category: EventCategory;
-  type: 'online' | 'offline' | 'hybrid';
+  category: string;
+  instructor: string;
+  instructorTitle?: string;
+  date: string;
+  endDate: string;
   location?: string;
-  meetingLink?: string;
-  startDate: Date;
-  endDate: Date;
-  maxParticipants?: number;
+  locationAddress?: string;
+  maxParticipants: number;
   currentParticipants: number;
-  status: 'draft' | 'published' | 'cancelled' | 'completed';
-  participants: EventParticipant[];
-  createdAt: Date;
-  updatedAt: Date;
+  price: number;
+  isOnline: boolean;
+  organizer: string;
+  organizerType: 'government' | 'private' | 'ngo' | 'individual' | 'hospital' | 'university';
+  tags: string[];
+  requirements?: string;
+  publishDate: string;
+  status: 'pending' | 'active' | 'full' | 'completed' | 'cancelled' | 'rejected';
+  authorId: string;
+  image?: string;
+  isRegistered?: boolean;
+  canRegister?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface EventParticipant {
@@ -179,6 +188,14 @@ export interface EventParticipant {
 }
 
 export type EventCategory = 
+  | 'Meditasyon'
+  | 'Yoga'
+  | 'Beslenme'
+  | 'Egzersiz'
+  | 'Psikoloji'
+  | 'Tıp'
+  | 'Alternatif Tıp'
+  | 'Sağlık Teknolojisi'
   | 'workshop'
   | 'seminar'
   | 'consultation'

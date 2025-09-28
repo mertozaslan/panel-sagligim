@@ -96,7 +96,8 @@ export default function PostsPage() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  const handleApprove = (post: Post) => {
+  const handleApprove = (item: any) => {
+    const post = item as Post;
     setPosts(posts.map(p => 
       p.id === post.id 
         ? { ...p, status: 'approved', publishedAt: new Date() }
@@ -104,7 +105,8 @@ export default function PostsPage() {
     ));
   };
 
-  const handleReject = (post: Post) => {
+  const handleReject = (item: any) => {
+    const post = item as Post;
     setPosts(posts.map(p => 
       p.id === post.id 
         ? { ...p, status: 'rejected' }
@@ -112,7 +114,8 @@ export default function PostsPage() {
     ));
   };
 
-  const handleView = (post: Post) => {
+  const handleView = (item: any) => {
+    const post = item as Post;
     setSelectedPost(post);
     setShowDetailModal(true);
   };
