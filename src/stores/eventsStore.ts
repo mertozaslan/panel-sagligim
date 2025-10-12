@@ -91,9 +91,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlikler yüklenirken bir hata oluştu';
       set({
         isLoading: false,
-        error: error.response?.data?.message || 'Etkinlikler yüklenirken bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -112,9 +113,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlik detayı yüklenirken bir hata oluştu';
       set({
         isLoading: false,
-        error: error.response?.data?.message || 'Etkinlik detayı yüklenirken bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -135,9 +137,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlik oluşturulurken bir hata oluştu';
       set({
         isCreating: false,
-        error: error.response?.data?.message || 'Etkinlik oluşturulurken bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -166,9 +169,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlik güncellenirken bir hata oluştu';
       set({
         isUpdating: false,
-        error: error.response?.data?.message || 'Etkinlik güncellenirken bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -197,9 +201,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlik silinirken bir hata oluştu';
       set({
         isDeleting: false,
-        error: error.response?.data?.message || 'Etkinlik silinirken bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -218,9 +223,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'İstatistikler yüklenirken bir hata oluştu';
       set({
         isLoading: false,
-        error: error.response?.data?.message || 'İstatistikler yüklenirken bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -240,9 +246,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlik arama sırasında bir hata oluştu';
       set({
         isLoading: false,
-        error: error.response?.data?.message || 'Etkinlik arama sırasında bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }
@@ -271,9 +278,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         error: null,
       });
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Etkinlik onaylama/reddetme sırasında bir hata oluştu';
       set({
         isLoading: false,
-        error: error.response?.data?.message || 'Etkinlik onaylama/reddetme sırasında bir hata oluştu',
+        error: errorMessage,
       });
       throw error;
     }

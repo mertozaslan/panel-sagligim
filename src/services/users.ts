@@ -25,7 +25,9 @@ export interface User {
     specialization?: string;
     hospital?: string;
     experience?: number;
+    licenseNumber?: string;
     approvalDate?: string;
+    approvedBy?: string;
     rejectionReason?: string;
   };
 }
@@ -161,6 +163,24 @@ export const usersService = {
   // Hastalık çıkarma
   removeMedicalCondition: async (conditionId: string): Promise<{ message: string }> => {
     const response = await api.delete(`/users/medical-conditions/${conditionId}`);
+    return response.data;
+  },
+
+  // Admin: Kullanıcı oluşturma (register endpoint kullan)
+  createUser: async (userData: any): Promise<{ message: string; user: User }> => {
+    const response = await api.post('/auth/register', userData);
+    return response.data;
+  },
+
+  // Admin: Kullanıcı güncelleme
+  updateUser: async (userId: string, userData: any): Promise<{ message: string; user: User }> => {
+    const response = await api.put(`/users/${userId}`, userData);
+    return response.data;
+  },
+
+  // Admin: Kullanıcı silme
+  deleteUser: async (userId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/users/${userId}`);
     return response.data;
   },
 };

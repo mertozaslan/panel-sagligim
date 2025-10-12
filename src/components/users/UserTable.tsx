@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
@@ -13,7 +14,9 @@ import {
   MapPin,
   Building,
   Award,
-  Clock
+  Clock,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { User } from '@/services/users';
@@ -21,9 +24,11 @@ import { User } from '@/services/users';
 interface UserTableProps {
   users: User[];
   onViewUser: (user: User) => void;
+  onEditUser: (user: User) => void;
+  onDeleteUser: (user: User) => void;
 }
 
-export default function UserTable({ users, onViewUser }: UserTableProps) {
+export default function UserTable({ users, onViewUser, onEditUser, onDeleteUser }: UserTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -139,7 +144,18 @@ export default function UserTable({ users, onViewUser }: UserTableProps) {
                   <div className="flex items-center">
                     <div className="h-10 w-10 flex-shrink-0">
                       {user.profilePicture ? (
-                        <img className="h-10 w-10 rounded-full" src={user.profilePicture} alt="" />
+                        <Image 
+                          className="rounded-full object-cover" 
+                          src={
+                            user.profilePicture.startsWith('http') 
+                              ? user.profilePicture 
+                              : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.saglikhep.com'}${user.profilePicture}`
+                          } 
+                          alt={`${user.firstName} ${user.lastName}`}
+                          width={40}
+                          height={40}
+                          unoptimized
+                        />
                       ) : (
                         <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                           <span className="text-sm font-medium text-gray-700">
@@ -183,7 +199,7 @@ export default function UserTable({ users, onViewUser }: UserTableProps) {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-end space-x-2">
                     <button
                       onClick={() => handleViewUser(user)}
                       className="text-indigo-600 hover:text-indigo-900 p-1"
@@ -192,8 +208,20 @@ export default function UserTable({ users, onViewUser }: UserTableProps) {
                       <Eye className="h-4 w-4" />
                     </button>
 
-                    <button className="text-gray-400 hover:text-gray-600 p-1">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <button
+                      onClick={() => onEditUser(user)}
+                      className="text-blue-600 hover:text-blue-900 p-1"
+                      title="Düzenle"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={() => onDeleteUser(user)}
+                      className="text-red-600 hover:text-red-900 p-1"
+                      title="Sil"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </td>
@@ -233,10 +261,17 @@ export default function UserTable({ users, onViewUser }: UserTableProps) {
                 <div className="flex items-start space-x-4">
                   <div className="h-16 w-16 flex-shrink-0">
                     {selectedUser.profilePicture ? (
-                      <img 
-                        className="h-16 w-16 rounded-full" 
-                        src={selectedUser.profilePicture} 
-                        alt={`${selectedUser.firstName} ${selectedUser.lastName}`} 
+                      <Image 
+                        className="rounded-full object-cover" 
+                        src={
+                          selectedUser.profilePicture.startsWith('http') 
+                            ? selectedUser.profilePicture 
+                            : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.saglikhep.com'}${selectedUser.profilePicture}`
+                        } 
+                        alt={`${selectedUser.firstName} ${selectedUser.lastName}`}
+                        width={64}
+                        height={64}
+                        unoptimized
                       />
                     ) : (
                       <div className="h-16 w-16 rounded-full bg-gray-300 flex items-center justify-center">

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { ErrorHandler } from '@/components/common/ErrorHandler'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,6 +19,7 @@ export default function RootLayout({
     <html lang="tr">
       <body className={inter.className}>
         {children}
+        <ErrorHandler />
       </body>
     </html>
   )

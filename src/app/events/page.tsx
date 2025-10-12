@@ -6,6 +6,10 @@ import { Event } from '@/types';
 import { useEventsStore } from '@/stores/eventsStore';
 import { formatDistanceToNow, format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { useErrorHandler } from '@/components/common/ErrorHandler';
+import { validateEventForm, validateField, EventFormData } from '@/utils/validation';
+import { FormField } from '@/components/common/FormField';
+import { ImageUpload } from '@/components/common/ImageUpload';
 import { 
   Search, 
   Filter, 
@@ -51,6 +55,8 @@ export default function EventsPage() {
     clearError,
   } = useEventsStore();
 
+  const { handleError, handleSuccess } = useErrorHandler();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -76,8 +82,11 @@ export default function EventsPage() {
     organizer: '',
     organizerType: '',
     requirements: '',
-    tags: [] as string[]
+    tags: [] as string[],
+    image: ''
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Sayfa yüklendiğinde etkinlikleri getir
   useEffect(() => {
@@ -152,7 +161,8 @@ export default function EventsPage() {
       organizer: event.organizer,
       organizerType: event.organizerType,
       requirements: event.requirements || '',
-      tags: event.tags || []
+      tags: event.tags || [],
+      image: event.image || ''
     });
     setShowEditModal(true);
   };
@@ -174,7 +184,8 @@ export default function EventsPage() {
       organizer: '',
       organizerType: '',
       requirements: '',
-      tags: []
+      tags: [],
+      image: ''
     });
     setShowCreateModal(true);
   };
@@ -186,6 +197,8 @@ export default function EventsPage() {
     setEditingEvent(null);
     setApprovingEvent(null);
     setApprovalReason('');
+    setFormErrors({});
+    setFieldErrors({});
   };
 
   const handleApprove = (event: Event) => {
@@ -222,44 +235,73 @@ export default function EventsPage() {
         action: approvalAction,
         reason: approvalReason || undefined
       });
+      handleSuccess(`Etkinlik ${approvalAction === 'approve' ? 'onaylandı' : 'reddedildi'}`);
       handleCloseModals();
       // Refresh events list
       getAllEvents();
     } catch (error) {
-      console.error('Etkinlik onaylama/reddetme hatası:', error);
+      handleError(error);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
+    let newValue: any = value;
     if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
+      newValue = (e.target as HTMLInputElement).checked;
     } else if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: Number(value) }));
+      newValue = Number(value);
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+    
+    // Real-time validation
+    const error = validateField(name, newValue, { ...formData, [name]: newValue });
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, [name]: error }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Clear previous errors
+    setFormErrors({});
+    
+    // Validate form
+    const validationErrors = validateEventForm(formData as EventFormData);
+    if (validationErrors.length > 0) {
+      const errors: Record<string, string> = {};
+      validationErrors.forEach(error => {
+        errors[error.field] = error.message;
+      });
+      setFormErrors(errors);
+      return;
+    }
+    
     try {
       const eventData = {
         ...formData,
         date: new Date(formData.date).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
-        tags: formData.tags.filter(tag => tag.trim() !== '')
+        tags: formData.tags.filter(tag => tag.trim() !== ''),
+        image: formData.image || undefined
       };
       
       await createEvent(eventData);
+      handleSuccess('Etkinlik başarıyla oluşturuldu');
       handleCloseModals();
       // Refresh events list
       getAllEvents();
     } catch (error) {
-      console.error('Etkinlik oluşturma hatası:', error);
+      handleError(error);
     }
   };
 
@@ -267,6 +309,20 @@ export default function EventsPage() {
     e.preventDefault();
     
     if (!editingEvent) return;
+    
+    // Clear previous errors
+    setFormErrors({});
+    
+    // Validate form
+    const validationErrors = validateEventForm(formData as EventFormData);
+    if (validationErrors.length > 0) {
+      const errors: Record<string, string> = {};
+      validationErrors.forEach(error => {
+        errors[error.field] = error.message;
+      });
+      setFormErrors(errors);
+      return;
+    }
     
     console.log('Editing event:', editingEvent); // Debug için
     console.log('Event ID:', editingEvent.id); // Debug için
@@ -297,15 +353,17 @@ export default function EventsPage() {
         organizer: formData.organizer,
         organizerType: formData.organizerType,
         requirements: formData.requirements,
-        tags: formData.tags.filter(tag => tag.trim() !== '')
+        tags: formData.tags.filter(tag => tag.trim() !== ''),
+        image: formData.image || undefined
       };
       
       await updateEvent(eventId, updateData);
+      handleSuccess('Etkinlik başarıyla güncellendi');
       handleCloseModals();
       // Refresh events list
       getAllEvents();
     } catch (error) {
-      console.error('Etkinlik güncelleme hatası:', error);
+      handleError(error);
     }
   };
 
@@ -325,8 +383,9 @@ export default function EventsPage() {
       
       try {
         await deleteEvent(eventId);
+        handleSuccess('Etkinlik başarıyla silindi');
       } catch (error) {
-        console.error('Etkinlik silme hatası:', error);
+        handleError(error);
       }
     }
   };
@@ -378,21 +437,6 @@ export default function EventsPage() {
       subtitle="Sağlık etkinliklerini organize edin ve yönetin"
     >
       <div className="space-y-6">
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
-            <AlertCircle className="h-5 w-5 text-red-400 mr-3" />
-            <div className="flex-1">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-            <button
-              onClick={clearError}
-              className="text-red-400 hover:text-red-600"
-            >
-              ×
-            </button>
-          </div>
-        )}
 
         {/* Header Actions */}
         <div className="flex justify-between items-center">
@@ -550,12 +594,12 @@ export default function EventsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900">
-                            {event.title}
+                            {event.title || 'Başlıksız Etkinlik'}
                           </p>
                           <p className="text-sm text-gray-600 mt-1">
-                            {event.description.length > 80 
+                            {event.description && event.description.length > 80 
                               ? event.description.slice(0, 80) + '...' 
-                              : event.description}
+                              : event.description || 'Açıklama yok'}
                           </p>
                           <div className="flex items-center mt-2 text-xs text-gray-500">
                                 {event.isOnline ? <Monitor className="h-3 w-3 mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
@@ -571,25 +615,28 @@ export default function EventsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                            {event.organizer}
+                            {event.organizer || '-'}
                       </div>
                       <div className="text-sm text-gray-500">
-                            {event.instructor}
+                            {event.instructor || '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                            {format(new Date(event.date), 'dd MMM yyyy', { locale: tr })}
+                            {event.date ? format(new Date(event.date), 'dd MMM yyyy', { locale: tr }) : '-'}
                       </div>
                       <div className="text-sm text-gray-500">
-                            {format(new Date(event.date), 'HH:mm')} - {format(new Date(event.endDate), 'HH:mm')}
+                            {event.date && event.endDate 
+                              ? `${format(new Date(event.date), 'HH:mm')} - ${format(new Date(event.endDate), 'HH:mm')}`
+                              : '-'
+                            }
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Users className="h-4 w-4 text-gray-400 mr-1" />
                         <span className="text-sm text-gray-900">
-                              {event.currentParticipants}/{event.maxParticipants}
+                              {event.currentParticipants || 0}/{event.maxParticipants || 0}
                         </span>
                       </div>
                     </td>
@@ -867,187 +914,154 @@ export default function EventsPage() {
                 <div className="mt-6">
                   <form onSubmit={handleCreateSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Etkinlik Başlığı *
-                        </label>
-                        <input
-                          type="text"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                          placeholder="Etkinlik başlığını girin"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Kategori *
-                        </label>
-                        <select 
-                          name="category"
-                          value={formData.category}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        >
-                          <option value="">Kategori seçin</option>
-                          <option value="Meditasyon">Meditasyon</option>
-                          <option value="Yoga">Yoga</option>
-                          <option value="Beslenme">Beslenme</option>
-                          <option value="Egzersiz">Egzersiz</option>
-                          <option value="Psikoloji">Psikoloji</option>
-                          <option value="Tıp">Tıp</option>
-                          <option value="Alternatif Tıp">Alternatif Tıp</option>
-                          <option value="Sağlık Teknolojisi">Sağlık Teknolojisi</option>
-                          <option value="Diğer">Diğer</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Açıklama *
-                      </label>
-                      <textarea
-                        rows={3}
-                        name="description"
-                        value={formData.description}
+                      <FormField
+                        label="Etkinlik Başlığı"
+                        name="title"
+                        type="text"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        placeholder="Etkinlik başlığını girin"
+                        required
+                        error={formErrors.title || fieldErrors.title}
+                        className="md:col-span-1"
+                      />
+                      <FormField
+                        label="Kategori"
+                        name="category"
+                        type="select"
+                        value={formData.category}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        placeholder="Etkinlik açıklamasını girin"
+                        error={formErrors.category || fieldErrors.category}
+                        options={[
+                          { value: 'Meditasyon', label: 'Meditasyon' },
+                          { value: 'Yoga', label: 'Yoga' },
+                          { value: 'Beslenme', label: 'Beslenme' },
+                          { value: 'Egzersiz', label: 'Egzersiz' },
+                          { value: 'Psikoloji', label: 'Psikoloji' },
+                          { value: 'Tıp', label: 'Tıp' },
+                          { value: 'Alternatif Tıp', label: 'Alternatif Tıp' },
+                          { value: 'Sağlık Teknolojisi', label: 'Sağlık Teknolojisi' },
+                          { value: 'Diğer', label: 'Diğer' }
+                        ]}
+                        className="md:col-span-1"
+                      />
+                    </div>
+
+                    <FormField
+                      label="Açıklama"
+                      name="description"
+                      type="textarea"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      placeholder="Etkinlik açıklamasını girin"
+                      required
+                      rows={3}
+                      error={formErrors.description || fieldErrors.description}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        label="Eğitmen"
+                        name="instructor"
+                        type="text"
+                        value={formData.instructor}
+                        onChange={handleInputChange}
+                        placeholder="Eğitmen adı"
+                        required
+                        error={formErrors.instructor || fieldErrors.instructor}
+                        className="md:col-span-1"
+                      />
+                      <FormField
+                        label="Eğitmen Unvanı"
+                        name="instructorTitle"
+                        type="text"
+                        value={formData.instructorTitle}
+                        onChange={handleInputChange}
+                        placeholder="Dr., Prof., Uzm. Dr. vb."
+                        error={formErrors.instructorTitle || fieldErrors.instructorTitle}
+                        className="md:col-span-1"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Eğitmen *
-                        </label>
-                        <input
-                          type="text"
-                          name="instructor"
-                          value={formData.instructor}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                          placeholder="Eğitmen adı"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Eğitmen Unvanı
-                        </label>
-                        <input
-                          type="text"
-                          name="instructorTitle"
-                          value={formData.instructorTitle}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                          placeholder="Dr., Prof., Uzm. Dr. vb."
-                        />
-                      </div>
+                      <FormField
+                        label="Başlangıç Tarihi"
+                        name="date"
+                        type="datetime-local"
+                        value={formData.date}
+                        onChange={handleInputChange}
+                        required
+                        error={formErrors.date || fieldErrors.date}
+                        className="md:col-span-1"
+                      />
+                      <FormField
+                        label="Bitiş Tarihi"
+                        name="endDate"
+                        type="datetime-local"
+                        value={formData.endDate}
+                        onChange={handleInputChange}
+                        required
+                        error={formErrors.endDate || fieldErrors.endDate}
+                        className="md:col-span-1"
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Başlangıç Tarihi *
-                        </label>
-                        <input
-                          type="datetime-local"
-                          name="date"
-                          value={formData.date}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Bitiş Tarihi *
-                        </label>
-                        <input
-                          type="datetime-local"
-                          name="endDate"
-                          value={formData.endDate}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        />
-                      </div>
+                      <FormField
+                        label="Maksimum Katılımcı"
+                        name="maxParticipants"
+                        type="number"
+                        value={formData.maxParticipants}
+                        onChange={handleInputChange}
+                        min={1}
+                        max={10000}
+                        required
+                        placeholder="50"
+                        error={formErrors.maxParticipants || fieldErrors.maxParticipants}
+                        className="md:col-span-1"
+                      />
+                      <FormField
+                        label="Fiyat (TL)"
+                        name="price"
+                        type="number"
+                        value={formData.price}
+                        onChange={handleInputChange}
+                        min={0}
+                        placeholder="0 (ücretsiz)"
+                        error={formErrors.price || fieldErrors.price}
+                        className="md:col-span-1"
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Maksimum Katılımcı *
-                        </label>
-                        <input
-                          type="number"
-                          name="maxParticipants"
-                          value={formData.maxParticipants}
-                          onChange={handleInputChange}
-                          min="1"
-                          max="1000"
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                          placeholder="50"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Fiyat (TL)
-                        </label>
-                        <input
-                          type="number"
-                          name="price"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          min="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                          placeholder="0 (ücretsiz)"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Organizatör *
-                        </label>
-                        <input
-                          type="text"
-                          name="organizer"
-                          value={formData.organizer}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                          placeholder="Organizatör adı"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Organizatör Tipi *
-                        </label>
-                        <select 
-                          name="organizerType"
-                          value={formData.organizerType}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        >
-                          <option value="">Tip seçin</option>
-                          <option value="government">Devlet Kurumu</option>
-                          <option value="private">Özel Şirket</option>
-                          <option value="ngo">STK</option>
-                          <option value="individual">Bireysel</option>
-                          <option value="hospital">Hastane</option>
-                          <option value="university">Üniversite</option>
-                        </select>
-                      </div>
+                      <FormField
+                        label="Organizatör"
+                        name="organizer"
+                        type="text"
+                        value={formData.organizer}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Organizatör adı"
+                        error={formErrors.organizer || fieldErrors.organizer}
+                        className="md:col-span-1"
+                      />
+                      <FormField
+                        label="Organizatör Tipi"
+                        name="organizerType"
+                        type="select"
+                        value={formData.organizerType}
+                        onChange={handleInputChange}
+                        required
+                        error={formErrors.organizerType || fieldErrors.organizerType}
+                        options={[
+                          { value: 'individual', label: 'Bireysel' },
+                          { value: 'organization', label: 'Kurum' },
+                          { value: 'hospital', label: 'Hastane' },
+                          { value: 'clinic', label: 'Klinik' }
+                        ]}
+                        className="md:col-span-1"
+                      />
                     </div>
 
                     <div>
@@ -1080,48 +1094,44 @@ export default function EventsPage() {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Lokasyon *
-                      </label>
-                      <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        placeholder="Etkinlik lokasyonu"
-                      />
-                    </div>
+                    <FormField
+                      label="Lokasyon"
+                      name="location"
+                      type="text"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Etkinlik lokasyonu"
+                      error={formErrors.location || fieldErrors.location}
+                    />
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Lokasyon Adresi
-                      </label>
-                      <input
-                        type="text"
-                        name="locationAddress"
-                        value={formData.locationAddress}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        placeholder="Detaylı adres"
-                      />
-                    </div>
+                    <FormField
+                      label="Lokasyon Adresi"
+                      name="locationAddress"
+                      type="text"
+                      value={formData.locationAddress}
+                      onChange={handleInputChange}
+                      placeholder="Detaylı adres"
+                      error={formErrors.locationAddress || fieldErrors.locationAddress}
+                    />
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Gereksinimler
-                      </label>
-                      <textarea
-                        rows={2}
-                        name="requirements"
-                        value={formData.requirements}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        placeholder="Katılımcıların getirmesi gerekenler..."
-                      />
-                    </div>
+                    <FormField
+                      label="Gereksinimler"
+                      name="requirements"
+                      type="textarea"
+                      value={formData.requirements}
+                      onChange={handleInputChange}
+                      placeholder="Katılımcıların getirmesi gerekenler..."
+                      rows={2}
+                      error={formErrors.requirements || fieldErrors.requirements}
+                    />
+
+                    <ImageUpload
+                      label="Etkinlik Resmi"
+                      value={formData.image}
+                      onChange={(imageUrl) => setFormData(prev => ({ ...prev, image: imageUrl }))}
+                      error={formErrors.image || fieldErrors.image}
+                    />
 
                     <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                       <button
@@ -1396,19 +1406,23 @@ export default function EventsPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Gereksinimler
-                      </label>
-                      <textarea
-                        rows={2}
-                        name="requirements"
-                        value={formData.requirements}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-health-500"
-                        placeholder="Katılımcıların getirmesi gerekenler..."
-                      />
-                    </div>
+                    <FormField
+                      label="Gereksinimler"
+                      name="requirements"
+                      type="textarea"
+                      value={formData.requirements}
+                      onChange={handleInputChange}
+                      placeholder="Katılımcıların getirmesi gerekenler..."
+                      rows={2}
+                      error={formErrors.requirements || fieldErrors.requirements}
+                    />
+
+                    <ImageUpload
+                      label="Etkinlik Resmi"
+                      value={formData.image}
+                      onChange={(imageUrl) => setFormData(prev => ({ ...prev, image: imageUrl }))}
+                      error={formErrors.image || fieldErrors.image}
+                    />
 
                     <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                       <button

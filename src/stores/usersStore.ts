@@ -27,6 +27,9 @@ interface UsersState {
   getUserStats: (userId: string) => Promise<void>;
   updateProfile: (profileData: any) => Promise<void>;
   toggleFollow: (userId: string) => Promise<void>;
+  createUser: (userData: any) => Promise<void>;
+  updateUser: (userId: string, userData: any) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
   setSearchTerm: (term: string) => void;
   setStatusFilter: (filter: string) => void;
   setRoleFilter: (role: string) => void;
@@ -176,6 +179,76 @@ export const useUsersStore = create<UsersState>((set, get) => ({
       set({
         isLoading: false,
         error: error.response?.data?.message || 'Takip işlemi sırasında bir hata oluştu',
+      });
+      throw error;
+    }
+  },
+
+  createUser: async (userData: any) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await usersService.createUser(userData);
+      
+      const { users } = get();
+      set({
+        users: [response.user, ...users],
+        isLoading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || 'Kullanıcı oluşturulurken bir hata oluştu',
+      });
+      throw error;
+    }
+  },
+
+  updateUser: async (userId: string, userData: any) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await usersService.updateUser(userId, userData);
+      
+      const { users } = get();
+      const updatedUsers = users.map(user => 
+        user.id === userId ? response.user : user
+      );
+      
+      set({
+        users: updatedUsers,
+        currentUser: response.user,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || 'Kullanıcı güncellenirken bir hata oluştu',
+      });
+      throw error;
+    }
+  },
+
+  deleteUser: async (userId: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      await usersService.deleteUser(userId);
+      
+      const { users } = get();
+      const filteredUsers = users.filter(user => user.id !== userId);
+      
+      set({
+        users: filteredUsers,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error.response?.data?.message || 'Kullanıcı silinirken bir hata oluştu',
       });
       throw error;
     }
