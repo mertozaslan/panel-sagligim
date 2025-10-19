@@ -1,43 +1,36 @@
 'use client';
 
-import { Post, Question, Comment } from '@/types';
+import { Post, Question, Comment, Blog } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
-  CheckCircle, 
-  XCircle, 
   Eye, 
   Edit, 
   Flag,
   User,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
-type ContentItem = Post | Question | Comment;
+type ContentItem = Post | Question | Comment | Blog;
 
 interface ContentModerationTableProps {
   items: ContentItem[];
-  onApprove: (item: ContentItem) => void;
-  onReject: (item: ContentItem) => void;
   onView: (item: ContentItem) => void;
   onEdit?: (item: ContentItem) => void;
+  onDelete?: (item: ContentItem) => void;
+  onViewComments?: (item: ContentItem) => void;
 }
 
 export default function ContentModerationTable({ 
   items, 
-  onApprove, 
-  onReject, 
   onView, 
-  onEdit 
+  onEdit,
+  onDelete,
+  onViewComments
 }: ContentModerationTableProps) {
-  const getContentType = (item: ContentItem): string => {
-    if ('excerpt' in item) return 'Makale';
-    if ('answers' in item) return 'Soru';
-    return 'Yorum';
-  };
-
   const getContentIcon = (item: ContentItem) => {
     if ('excerpt' in item) return <Edit className="h-4 w-4" />;
     if ('answers' in item) return <MessageSquare className="h-4 w-4" />;
@@ -55,41 +48,25 @@ export default function ContentModerationTable({
     return 'Genel';
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusClasses = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800',
-      published: 'bg-green-100 text-green-800',
-      draft: 'bg-gray-100 text-gray-800'
-    };
-
-    const statusText = {
-      pending: 'Bekliyor',
-      approved: 'Onaylandı',
-      rejected: 'Reddedildi',
-      published: 'Yayında',
-      draft: 'Taslak'
-    };
-
-    return (
-      <span className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-        statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800'
-      )}>
-        {statusText[status as keyof typeof statusText] || status}
-      </span>
-    );
-  };
 
   const getCategoryBadge = (category: string) => {
     const categoryClasses = {
+      // Post kategorileri
       nutrition: 'bg-green-100 text-green-800',
       fitness: 'bg-blue-100 text-blue-800',
       'mental-health': 'bg-purple-100 text-purple-800',
       lifestyle: 'bg-pink-100 text-pink-800',
       diseases: 'bg-red-100 text-red-800',
       prevention: 'bg-yellow-100 text-yellow-800',
+      // Blog kategorileri
+      'medical-advice': 'bg-red-100 text-red-800',
+      'health-tips': 'bg-blue-100 text-blue-800',
+      'disease-information': 'bg-orange-100 text-orange-800',
+      'treatment-guides': 'bg-purple-100 text-purple-800',
+      'emergency-care': 'bg-red-100 text-red-800',
+      'pediatrics': 'bg-pink-100 text-pink-800',
+      'geriatrics': 'bg-gray-100 text-gray-800',
+      'research': 'bg-indigo-100 text-indigo-800',
       wellness: 'bg-indigo-100 text-indigo-800',
       other: 'bg-gray-100 text-gray-800'
     };
@@ -137,9 +114,6 @@ export default function ContentModerationTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tarih
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Durum
-              </th>
               <th className="relative px-6 py-3">
                 <span className="sr-only">Actions</span>
               </th>
@@ -156,11 +130,7 @@ export default function ContentModerationTable({
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          {getContentType(item)}
-                        </span>
-                      </div>
+  
                       <p className="text-sm font-medium text-gray-900 mt-1">
                         {getItemTitle(item)}
                       </p>
@@ -177,10 +147,10 @@ export default function ContentModerationTable({
                     </div>
                     <div className="ml-3">
                       <div className="text-sm font-medium text-gray-900">
-                        {item.author.name}
+                        {'firstName' in item.author ? `${item.author.firstName} ${item.author.lastName}` : item.author.name}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {item.author.role === 'expert' ? 'Uzman' : 'Kullanıcı'}
+                        {'username' in item.author ? `@${item.author.username}` : item.author.role === 'expert' ? 'Uzman' : 'Kullanıcı'}
                       </div>
                     </div>
                   </div>
@@ -191,11 +161,18 @@ export default function ContentModerationTable({
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                    {formatDistanceToNow(item.createdAt, { addSuffix: true, locale: tr })}
+                    {(() => {
+                      try {
+                        const date = new Date(item.createdAt);
+                        if (isNaN(date.getTime())) {
+                          return 'Geçersiz tarih';
+                        }
+                        return formatDistanceToNow(date, { addSuffix: true, locale: tr });
+                      } catch (error) {
+                        return 'Geçersiz tarih';
+                      }
+                    })()}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {getStatusBadge(item.status)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center space-x-2">
@@ -216,25 +193,25 @@ export default function ContentModerationTable({
                         <Edit className="h-4 w-4" />
                       </button>
                     )}
-                    
-                    {item.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => onApprove(item)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Onayla"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </button>
 
-                        <button
-                          onClick={() => onReject(item)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Reddet"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                      </>
+                    {onViewComments && (
+                      <button
+                        onClick={() => onViewComments(item)}
+                        className="text-green-600 hover:text-green-900 p-1"
+                        title="Yorumları Görüntüle"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </button>
+                    )}
+
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(item)}
+                        className="text-red-600 hover:text-red-900 p-1"
+                        title="Sil"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     )}
                   </div>
                 </td>

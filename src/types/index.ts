@@ -67,19 +67,288 @@ export interface Post {
   id: string;
   title: string;
   content: string;
-  excerpt: string;
+  excerpt?: string;
   authorId: string;
-  author: User;
-  category: ContentCategory;
+  author: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  category: PostCategory;
   tags: string[];
+  images: string[];
+  isAnonymous: boolean;
+  isSensitive: boolean;
+  medicalAdvice: boolean;
+  symptoms: string[];
+  treatments: string[];
+  likes: string[];
+  dislikes: string[];
+  views: number;
+  isApproved: boolean;
+  isReported: boolean;
+  reportCount: number;
+  likesCount: number;
+  dislikesCount: number;
+  commentCount: number;
   status: ContentStatus;
   moderationNotes?: string;
   publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-  likes: number;
-  views: number;
+  comments?: Comment[];
+}
+
+export type PostCategory = 
+  | 'diabetes'
+  | 'heart-disease'
+  | 'cancer'
+  | 'mental-health'
+  | 'arthritis'
+  | 'asthma'
+  | 'digestive'
+  | 'neurological'
+  | 'autoimmune'
+  | 'other';
+
+export interface PostFilters {
+  page?: number;
+  limit?: number;
+  category?: string;
+  sortBy?: 'createdAt' | 'likesCount' | 'views' | 'commentCount';
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+}
+
+export interface PostResponse {
+  posts: Post[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalPosts: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface PostCreateData {
+  title: string;
+  content: string;
+  category: PostCategory;
+  tags: string[];
+  images: string[];
+  isAnonymous: boolean;
+  isSensitive: boolean;
+  medicalAdvice: boolean;
+  symptoms: string[];
+  treatments: string[];
+}
+
+export interface PostUpdateData {
+  title?: string;
+  content?: string;
+  category?: PostCategory;
+  tags?: string[];
+  images?: string[];
+  isAnonymous?: boolean;
+  isSensitive?: boolean;
+  medicalAdvice?: boolean;
+  symptoms?: string[];
+  treatments?: string[];
+}
+
+export interface PostReportData {
+  reason: 'spam' | 'inappropriate' | 'harassment' | 'false_information' | 'other';
+  description?: string;
+}
+
+// Comment Types
+export interface Comment {
+  id: string;
+  postOrBlog: string;
+  postType: 'Post' | 'Blog';
+  author: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  content: string;
+  isAnonymous: boolean;
+  likes: string[];
+  dislikes: string[];
+  isApproved: boolean;
+  isReported: boolean;
+  reportCount: number;
+  parentComment?: string;
+  replies: string[];
+  isHelpful: boolean;
+  medicalAdvice: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  // Virtual fields
+  likeCount: number;
+  dislikeCount: number;
+  replyCount: number;
+}
+
+export interface CommentCreateData {
+  content: string;
+  isAnonymous?: boolean;
+  parentComment?: string;
+  postType?: 'Post' | 'Blog';
+}
+
+export interface CommentUpdateData {
+  content?: string;
+  isAnonymous?: boolean;
+}
+
+export interface CommentReportData {
+  reason: string;
+}
+
+export interface CommentResponse {
   comments: Comment[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalComments: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface CommentFilters {
+  page?: number;
+  limit?: number;
+  postType?: 'Post' | 'Blog';
+}
+
+// Blog Types
+export interface Blog {
+  id: string;
+  author: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
+  title: string;
+  content: string;
+  excerpt?: string;
+  category: BlogCategory;
+  tags: string[];
+  images: string[];
+  featuredImage?: string;
+  isPublished: boolean;
+  isFeatured: boolean;
+  readingTime: number;
+  likes: string[];
+  dislikes: string[];
+  views: number;
+  commentCount: number;
+  isApproved: boolean;
+  isReported: boolean;
+  reportCount: number;
+  medicalDisclaimer?: string;
+  references: {
+    title: string;
+    url: string;
+  }[];
+  seoTitle?: string;
+  seoDescription?: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // Virtual fields
+  likesCount: number;
+  dislikesCount: number;
+}
+
+export type BlogCategory = 
+  | 'medical-advice'
+  | 'health-tips'
+  | 'disease-information'
+  | 'treatment-guides'
+  | 'prevention'
+  | 'nutrition'
+  | 'mental-health'
+  | 'pediatrics'
+  | 'geriatrics'
+  | 'emergency-care'
+  | 'research'
+  | 'other';
+
+export interface BlogCreateData {
+  title: string;
+  content: string;
+  excerpt?: string;
+  category: BlogCategory;
+  tags?: string[];
+  images?: string[];
+  featuredImage?: string;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  medicalDisclaimer?: string;
+  references?: {
+    title: string;
+    url: string;
+  }[];
+  seoTitle?: string;
+  seoDescription?: string;
+}
+
+export interface BlogUpdateData {
+  title?: string;
+  content?: string;
+  excerpt?: string;
+  category?: BlogCategory;
+  tags?: string[];
+  images?: string[];
+  featuredImage?: string;
+  isPublished?: boolean;
+  isFeatured?: boolean;
+  medicalDisclaimer?: string;
+  references?: {
+    title: string;
+    url: string;
+  }[];
+  seoTitle?: string;
+  seoDescription?: string;
+}
+
+export interface BlogReportData {
+  reason: string;
+}
+
+export interface BlogResponse {
+  blogs: Blog[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalBlogs: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  trendCategories?: {
+    name: string;
+    count: number;
+  }[];
+}
+
+export interface BlogFilters {
+  page?: number;
+  limit?: number;
+  category?: BlogCategory;
+  author?: string;
+  search?: string;
+  featured?: boolean;
+  published?: boolean;
 }
 
 export interface Question {
@@ -227,18 +496,104 @@ export type ReportReason =
   | 'copyright'
   | 'other';
 
+// Dashboard Types
 export interface DashboardStats {
-  totalUsers: number;
-  totalExperts: number;
-  newUsersThisWeek: number;
-  postsThisMonth: number;
-  questionsThisMonth: number;
-  answersThisMonth: number;
-  pendingExpertApplications: number;
-  pendingContentModeration: number;
-  unansweredQuestions: number;
-  reportedContent: number;
-  activeEvents: number;
+  general: {
+    totalUsers: number;
+    totalPosts: number;
+    totalBlogs: number;
+    totalEvents: number;
+    totalComments: number;
+    totalDiseases: number;
+  };
+  users: {
+    activeUsers: number;
+    verifiedUsers: number;
+    doctors: number;
+    patients: number;
+    admins: number;
+  };
+  recent: {
+    newUsers: number;
+    newPosts: number;
+    newBlogs: number;
+    newEvents: number;
+    newComments: number;
+  };
+  topContent: {
+    topLikedPosts: any[];
+    topViewedPosts: any[];
+    topLikedBlogs: any[];
+    topViewedBlogs: any[];
+    topLikedComments: any[];
+    topEvents: any[];
+  };
+  topUsers: {
+    topPosters: any[];
+    topBloggers: any[];
+    topCommenters: any[];
+    topEventParticipants: any[];
+  };
+  recentUsers: any[];
+  categories: {
+    postCategories: any[];
+    blogCategories: any[];
+    eventCategories: any[];
+  };
+  interactions: {
+    totalPostLikes: number;
+    totalBlogLikes: number;
+    totalCommentLikes: number;
+    totalPostViews: number;
+    totalBlogViews: number;
+  };
+  recentActivity: {
+    newUsers: number;
+    newPosts: number;
+    newBlogs: number;
+    newEvents: number;
+    newComments: number;
+  };
+}
+
+export interface TopContentItem {
+  _id: string;
+  title: string;
+  content: string;
+  category: string;
+  likes: string[];
+  views: number;
+  createdAt: string;
+  author: {
+    _id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
+export interface TopUser {
+  userId: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  profilePicture?: string;
+  postCount?: number;
+  blogCount?: number;
+  commentCount?: number;
+  eventCount?: number;
+  totalLikes?: number;
+  totalViews?: number;
+}
+
+export interface CategoryStats {
+  _id: string;
+  count: number;
+  totalLikes?: number;
+  totalViews?: number;
+  totalParticipants?: number;
 }
 
 export interface ActivityLog {

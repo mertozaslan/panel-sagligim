@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Axios instance oluştur
 const api = axios.create({
-  baseURL: 'https://api.saglikhep.com/api',
+  baseURL: 'http://localhost:3000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -42,7 +42,7 @@ api.interceptors.response.use(
         // Refresh token ile yeni token al
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
-          const response = await axios.post('https://api.saglikhep.com/api/auth/refresh', {
+          const response = await axios.post('http://localhost:3000/api/auth/refresh', {
             refreshToken,
           });
 
