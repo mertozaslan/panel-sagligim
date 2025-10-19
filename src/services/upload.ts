@@ -63,7 +63,7 @@ export const uploadService = {
   getImageUrl: (imageUrl: string): string => {
     if (!imageUrl) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `${process.env.NEXT_PUBLIC_IMAGE_URL || 'http://localhost:3000'}${imageUrl}`;
+    return `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.saglikhep.com'}${imageUrl}`;
   },
 
   // Dosya adını URL'den çıkar

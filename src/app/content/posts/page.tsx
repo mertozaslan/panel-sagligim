@@ -574,7 +574,7 @@ export default function PostsPage() {
                         {selectedPost.images.map((image, index) => (
                           <div key={index} className="relative group">
                             <img
-                              src={`http://localhost:3000${image}`}
+                              src={`https://api.saglikhep.com${image}`}
                               alt={`Post resmi ${index + 1}`}
                               className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
                               onError={(e) => {
@@ -583,7 +583,7 @@ export default function PostsPage() {
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
                               <button
-                                onClick={() => window.open(`http://localhost:3000${image}`, '_blank')}
+                                onClick={() => window.open(`https://api.saglikhep.com${image}`, '_blank')}
                                 className="opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                               >
                                 <Eye className="h-4 w-4 mr-1 inline" />
