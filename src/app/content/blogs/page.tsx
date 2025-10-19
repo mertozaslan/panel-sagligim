@@ -605,7 +605,7 @@ export default function BlogsPage() {
         {loading ? (
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-health-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Blog'lar yükleniyor...</p>
+            <p className="mt-2 text-gray-600">Blog&apos;lar yükleniyor...</p>
         </div>
         ) : (
           <ContentModerationTable
@@ -1176,7 +1176,7 @@ export default function BlogsPage() {
                       Yorum Yönetimi
                   </h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      "{selectedBlogForComments.title}" başlıklı blog'un yorumları
+                      &quot;{selectedBlogForComments.title}&quot; başlıklı blog&apos;un yorumları
                     </p>
                   </div>
                   <button
