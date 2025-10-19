@@ -40,7 +40,7 @@ const navigation = [
     icon: FileText,
     children: [
       { name: 'Paylaşımlar', href: '/content/posts' },
-      { name: 'Sorular', href: '/content/questions' },
+      { name: 'Bloglar', href: '/content/blogs' },
       { name: 'Raporlanan İçerik', href: '/content/reports' },
     ]
   },
@@ -48,12 +48,7 @@ const navigation = [
     name: 'Etkinlik Yönetimi',
     href: '/events',
     icon: Calendar,
-  },
-  {
-    name: 'Sistem Ayarları',
-    href: '/settings',
-    icon: Settings,
-  },
+  }
 ];
 
 interface SidebarProps {

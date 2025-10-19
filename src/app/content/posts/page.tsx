@@ -1,128 +1,238 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ContentModerationTable from '@/components/content/ContentModerationTable';
-import { Post } from '@/types';
-import { Search, Filter, Clock, CheckCircle, XCircle } from 'lucide-react';
+import CommentsTable from '@/components/content/CommentsTable';
+import { Post, PostCategory, Comment } from '@/types';
+import { usePostsStore } from '@/stores/postsStore';
+import { useCommentsStore } from '@/stores/commentsStore';
+import { Search, XCircle, Eye, Heart, MessageSquare, AlertTriangle, MessageCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
 
-// Mock data
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    title: 'Sağlıklı Beslenme İpuçları',
-    content: 'Günlük yaşamımızda sağlıklı beslenme alışkanlıkları geliştirmek için önemli ipuçları...',
-    excerpt: 'Sağlıklı beslenme alışkanlıkları hakkında detaylı bilgiler',
-    authorId: '1',
-    author: { id: '1', name: 'Ayşe Kaya', email: 'ayse@email.com', role: 'user', status: 'active', createdAt: new Date() },
-    category: 'nutrition',
-    tags: ['beslenme', 'sağlık', 'diyet'],
-    status: 'pending',
-    publishedAt: undefined,
-    createdAt: new Date('2024-01-20'),
-    updatedAt: new Date('2024-01-20'),
-    likes: 0,
-    views: 0,
-    comments: []
-  },
-  {
-    id: '2',
-    title: 'Egzersiz ve Kalp Sağlığı',
-    content: 'Düzenli egzersizin kalp sağlığı üzerindeki olumlu etkileri ve öneriler...',
-    excerpt: 'Kalp sağlığı için egzersiz önerileri',
-    authorId: '2',
-    author: { id: '2', name: 'Dr. Mehmet Yılmaz', email: 'dr.mehmet@email.com', role: 'expert', status: 'active', createdAt: new Date() },
-    category: 'fitness',
-    tags: ['egzersiz', 'kalp', 'sağlık'],
-    status: 'pending',
-    publishedAt: undefined,
-    createdAt: new Date('2024-01-19'),
-    updatedAt: new Date('2024-01-19'),
-    likes: 0,
-    views: 0,
-    comments: []
-  },
-  {
-    id: '3',
-    title: 'Stres Yönetimi Teknikleri',
-    content: 'Günlük hayatta stresle başa çıkma yöntemleri ve rahatlama teknikleri...',
-    excerpt: 'Stres yönetimi için pratik çözümler',
-    authorId: '3',
-    author: { id: '3', name: 'Zeynep Ak', email: 'zeynep@email.com', role: 'user', status: 'active', createdAt: new Date() },
-    category: 'mental-health',
-    tags: ['stres', 'zihinsel-sağlık', 'rahatlama'],
-    status: 'approved',
-    publishedAt: new Date('2024-01-18'),
-    createdAt: new Date('2024-01-18'),
-    updatedAt: new Date('2024-01-18'),
-    likes: 15,
-    views: 234,
-    comments: []
-  },
-  {
-    id: '4',
-    title: 'Uyku Düzeni ve Sağlık',
-    content: 'Kaliteli uykunun sağlık üzerindeki etkileri ve uyku hijyeni önerileri...',
-    excerpt: 'Sağlıklı uyku düzeni için ipuçları',
-    authorId: '4',
-    author: { id: '4', name: 'Can Demir', email: 'can@email.com', role: 'user', status: 'active', createdAt: new Date() },
-    category: 'wellness',
-    tags: ['uyku', 'sağlık', 'yaşam-tarzı'],
-    status: 'pending',
-    publishedAt: undefined,
-    createdAt: new Date('2024-01-17'),
-    updatedAt: new Date('2024-01-17'),
-    likes: 0,
-    views: 0,
-    comments: []
-  }
+// Post kategorileri
+const postCategories: { value: PostCategory; label: string }[] = [
+  { value: 'diabetes', label: 'Diyabet' },
+  { value: 'heart-disease', label: 'Kalp Hastalıkları' },
+  { value: 'cancer', label: 'Kanser' },
+  { value: 'mental-health', label: 'Ruh Sağlığı' },
+  { value: 'arthritis', label: 'Artrit' },
+  { value: 'asthma', label: 'Astım' },
+  { value: 'digestive', label: 'Sindirim Sistemi' },
+  { value: 'neurological', label: 'Nörolojik Hastalıklar' },
+  { value: 'autoimmune', label: 'Otoimmün Hastalıklar' },
+  { value: 'other', label: 'Diğer' },
 ];
 
 export default function PostsPage() {
-  const [posts, setPosts] = useState<Post[]>(mockPosts);
+  const {
+    posts,
+    loading,
+    error,
+    pagination,
+    fetchPosts,
+    deletePost,
+    updatePost,
+    setFilters,
+    clearError,
+  } = usePostsStore();
+
+  const {
+    comments,
+    loading: commentsLoading,
+    error: commentsError,
+    fetchCommentsByPost,
+    deleteComment,
+    clearError: clearCommentsError,
+  } = useCommentsStore();
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [selectedPostForComments, setSelectedPostForComments] = useState<Post | null>(null);
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.author.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || post.category === categoryFilter;
+  // Component mount olduğunda posts'ları yükle
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  // Filtreler değiştiğinde posts'ları yeniden yükle
+  useEffect(() => {
+    const filters = {
+      search: searchTerm || undefined,
+      category: categoryFilter !== 'all' ? categoryFilter : undefined,
+      sortBy: 'createdAt' as const,
+      sortOrder: 'desc' as const,
+    };
     
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+    setFilters(filters);
+    fetchPosts(filters);
+  }, [searchTerm, categoryFilter]);
 
-  const handleApprove = (item: any) => {
-    const post = item as Post;
-    setPosts(posts.map(p => 
-      p.id === post.id 
-        ? { ...p, status: 'approved', publishedAt: new Date() }
-        : p
-    ));
-  };
+  const filteredPosts = posts;
 
-  const handleReject = (item: any) => {
+
+  const handleDelete = async (item: any) => {
     const post = item as Post;
-    setPosts(posts.map(p => 
-      p.id === post.id 
-        ? { ...p, status: 'rejected' }
-        : p
-    ));
+    // API'den gelen _id'yi id olarak kullan
+    const postId = post.id || (post as any)._id;
+    
+    const result = await Swal.fire({
+      title: 'Post\'u Sil',
+      html: `"${post.title}" başlıklı post\'u silmek istediğinizden emin misiniz?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Evet, Sil!',
+      cancelButtonText: 'İptal',
+      background: '#ffffff',
+      customClass: {
+        popup: 'rounded-2xl shadow-2xl',
+        title: 'text-gray-800 font-semibold text-xl',
+        htmlContainer: 'text-gray-600',
+        confirmButton: 'rounded-xl px-6 py-3 font-medium',
+        cancelButton: 'rounded-xl px-6 py-3 font-medium'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deletePost(postId);
+        
+        // Posts listesini yeniden fetch et
+        await fetchPosts();
+        
+        Swal.fire({
+          title: 'Başarıyla Silindi!',
+          html: 'Post başarıyla silindi.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          background: '#ffffff',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            title: 'text-gray-800 font-semibold text-xl',
+            htmlContainer: 'text-gray-600'
+          }
+        });
+      } catch (error) {
+        console.error('Post silme hatası:', error);
+        
+        Swal.fire({
+          title: 'Hata!',
+          html: 'Post silinirken bir hata oluştu.',
+          icon: 'error',
+          confirmButtonText: 'Tamam',
+          background: '#ffffff',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            title: 'text-gray-800 font-semibold text-xl',
+            htmlContainer: 'text-gray-600',
+            confirmButton: 'rounded-xl px-6 py-3 font-medium'
+          }
+        });
+      }
+    }
   };
 
   const handleView = (item: any) => {
     const post = item as Post;
-    setSelectedPost(post);
+    // API'den gelen _id'yi id olarak kullan
+    const postWithId = {
+      ...post,
+      id: post.id || (post as any)._id
+    };
+    setSelectedPost(postWithId);
     setShowDetailModal(true);
   };
 
-  const pendingCount = posts.filter(p => p.status === 'pending').length;
-  const approvedCount = posts.filter(p => p.status === 'approved').length;
-  const rejectedCount = posts.filter(p => p.status === 'rejected').length;
+  const handleEdit = (item: any) => {
+    const post = item as Post;
+    // API'den gelen _id'yi id olarak kullan
+    const postWithId = {
+      ...post,
+      id: post.id || (post as any)._id
+    };
+    setEditingPost(postWithId);
+    setShowEditModal(true);
+  };
+
+  const handleViewComments = (item: any) => {
+    const post = item as Post;
+    // API'den gelen _id'yi id olarak kullan
+    const postWithId = {
+      ...post,
+      id: post.id || (post as any)._id
+    };
+    setSelectedPostForComments(postWithId);
+    setShowCommentsModal(true);
+    // Post'un yorumlarını yükle
+    fetchCommentsByPost(postWithId.id);
+  };
+
+  const handleDeleteComment = async (comment: Comment) => {
+    const result = await Swal.fire({
+      title: 'Yorumu Sil',
+      html: `Bu yorumu silmek istediğinizden emin misiniz?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Evet, Sil!',
+      cancelButtonText: 'İptal',
+      background: '#ffffff',
+      customClass: {
+        popup: 'rounded-2xl shadow-2xl',
+        title: 'text-gray-800 font-semibold text-xl',
+        htmlContainer: 'text-gray-600',
+        confirmButton: 'rounded-xl px-6 py-3 font-medium',
+        cancelButton: 'rounded-xl px-6 py-3 font-medium'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteComment(comment.id);
+        
+        Swal.fire({
+          title: 'Başarıyla Silindi!',
+          html: 'Yorum başarıyla silindi.',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false,
+          background: '#ffffff',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            title: 'text-gray-800 font-semibold text-xl',
+            htmlContainer: 'text-gray-600'
+          }
+        });
+      } catch (error) {
+        console.error('Yorum silme hatası:', error);
+        
+        Swal.fire({
+          title: 'Hata!',
+          html: 'Yorum silinirken bir hata oluştu.',
+          icon: 'error',
+          confirmButtonText: 'Tamam',
+          background: '#ffffff',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            title: 'text-gray-800 font-semibold text-xl',
+            htmlContainer: 'text-gray-600',
+            confirmButton: 'rounded-xl px-6 py-3 font-medium'
+          }
+        });
+      }
+    }
+  };
+
+
 
   return (
     <DashboardLayout 
@@ -130,22 +240,27 @@ export default function PostsPage() {
       subtitle="Kullanıcı ve uzman paylaşımlarını inceleyin ve yönetin"
     >
       <div className="space-y-6">
-        {/* Alert for pending posts */}
-        {pendingCount > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        {/* Error Alert */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Clock className="h-5 w-5 text-yellow-600 mr-2" />
+                <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
               <div>
-                <h3 className="text-sm font-medium text-yellow-800">
-                  {pendingCount} paylaşım moderasyon bekliyor
-                </h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Paylaşımları inceleyin ve uygun olanları onaylayın.
-                </p>
+                  <h3 className="text-sm font-medium text-red-800">Hata</h3>
+                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                </div>
               </div>
+              <button
+                onClick={clearError}
+                className="text-red-400 hover:text-red-600"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
             </div>
           </div>
         )}
+
 
         {/* Filters */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -165,19 +280,6 @@ export default function PostsPage() {
                 />
               </div>
 
-              {/* Status Filter */}
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-health-500 focus:border-transparent"
-                >
-                  <option value="all">Tüm Durumlar</option>
-                  <option value="pending">Bekleyen</option>
-                  <option value="approved">Onaylanan</option>
-                  <option value="rejected">Reddedilen</option>
-                </select>
-              </div>
 
               {/* Category Filter */}
               <div className="relative">
@@ -187,53 +289,252 @@ export default function PostsPage() {
                   className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-health-500 focus:border-transparent"
                 >
                   <option value="all">Tüm Kategoriler</option>
-                  <option value="nutrition">Beslenme</option>
-                  <option value="fitness">Fitness</option>
-                  <option value="mental-health">Ruh Sağlığı</option>
-                  <option value="lifestyle">Yaşam Tarzı</option>
-                  <option value="diseases">Hastalıklar</option>
-                  <option value="prevention">Korunma</option>
-                  <option value="wellness">Sağlık</option>
+                  {postCategories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
-            <div className="flex space-x-2">
-              <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                <Filter className="h-4 w-4 mr-2" />
-                Gelişmiş Filtre
-              </button>
-            </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="text-2xl font-bold text-gray-900">{posts.length}</div>
             <div className="text-sm text-gray-600">Toplam Paylaşım</div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
-            <div className="text-sm text-gray-600">Bekleyen</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-2xl font-bold text-green-600">{approvedCount}</div>
-            <div className="text-sm text-gray-600">Onaylanan</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-2xl font-bold text-red-600">{rejectedCount}</div>
-            <div className="text-sm text-gray-600">Reddedilen</div>
-          </div>
         </div>
 
         {/* Posts Table */}
+        {loading ? (
+          <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-health-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Post'lar yükleniyor...</p>
+          </div>
+        ) : (
         <ContentModerationTable
           items={filteredPosts}
-          onApprove={handleApprove}
-          onReject={handleReject}
           onView={handleView}
-        />
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewComments={handleViewComments}
+          />
+        )}
+
+        {/* Edit Modal */}
+        {showEditModal && editingPost && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Post Düzenle
+                  </h2>
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <XCircle className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Başlık
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPost.title}
+                    onChange={(e) => setEditingPost({...editingPost, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    İçerik
+                  </label>
+                  <textarea
+                    value={editingPost.content}
+                    onChange={(e) => setEditingPost({...editingPost, content: e.target.value})}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Kategori
+                  </label>
+                  <select
+                    value={editingPost.category}
+                    onChange={(e) => setEditingPost({...editingPost, category: e.target.value as PostCategory})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
+                  >
+                    {postCategories.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Etiketler (virgülle ayırın)
+                  </label>
+                  <input
+                    type="text"
+                    value={Array.isArray(editingPost.tags) ? editingPost.tags.join(', ') : editingPost.tags || ''}
+                    onChange={(e) => setEditingPost({...editingPost, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)})}
+                    placeholder="etiket1, etiket2, etiket3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-gray-900">Post Özellikleri</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <label className="flex items-start space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingPost.isAnonymous}
+                          onChange={(e) => setEditingPost({...editingPost, isAnonymous: e.target.checked})}
+                          className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">Anonim</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Yazar bilgileri gizlenir</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <label className="flex items-start space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingPost.isSensitive}
+                          onChange={(e) => setEditingPost({...editingPost, isSensitive: e.target.checked})}
+                          className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                              </svg>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">Hassas İçerik</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Duyarlı konular içerir</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                      <label className="flex items-start space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingPost.medicalAdvice}
+                          onChange={(e) => setEditingPost({...editingPost, medicalAdvice: e.target.checked})}
+                          className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                              </svg>
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">Tıbbi Tavsiye</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">Sağlık önerileri içerir</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+
+                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await updatePost(editingPost.id, {
+                          title: editingPost.title,
+                          content: editingPost.content,
+                          category: editingPost.category,
+                          tags: editingPost.tags,
+                          isAnonymous: editingPost.isAnonymous,
+                          isSensitive: editingPost.isSensitive,
+                          medicalAdvice: editingPost.medicalAdvice,
+                        });
+                        
+                        // Posts listesini yeniden fetch et
+                        await fetchPosts();
+                        
+                        setShowEditModal(false);
+                        
+                        Swal.fire({
+                          title: 'Başarıyla Güncellendi!',
+                          html: 'Post başarıyla güncellendi.',
+                          icon: 'success',
+                          timer: 2000,
+                          showConfirmButton: false,
+                          background: '#ffffff',
+                          customClass: {
+                            popup: 'rounded-2xl shadow-2xl',
+                            title: 'text-gray-800 font-semibold text-xl',
+                            htmlContainer: 'text-gray-600'
+                          }
+                        });
+                      } catch (error) {
+                        console.error('Post güncelleme hatası:', error);
+                        
+                        Swal.fire({
+                          title: 'Hata!',
+                          html: 'Post güncellenirken bir hata oluştu.',
+                          icon: 'error',
+                          confirmButtonText: 'Tamam',
+                          background: '#ffffff',
+                          customClass: {
+                            popup: 'rounded-2xl shadow-2xl',
+                            title: 'text-gray-800 font-semibold text-xl',
+                            htmlContainer: 'text-gray-600',
+                            confirmButton: 'rounded-xl px-6 py-3 font-medium'
+                          }
+                        });
+                      }
+                    }}
+                    className="px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-health-600 hover:bg-health-700"
+                  >
+                    Güncelle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Detail Modal */}
         {showDetailModal && selectedPost && (
@@ -257,22 +558,52 @@ export default function PostsPage() {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">{selectedPost.title}</h3>
                   <div className="flex items-center space-x-4 text-sm text-gray-600 mb-4">
-                    <span>Yazar: {selectedPost.author.name}</span>
-                    <span>Kategori: {selectedPost.category}</span>
-                    <span>Tarih: {selectedPost.createdAt.toLocaleDateString('tr-TR')}</span>
+                    <span>Yazar: {selectedPost.author.firstName} {selectedPost.author.lastName} (@{selectedPost.author.username})</span>
+                    <span>Kategori: {postCategories.find(c => c.value === selectedPost.category)?.label}</span>
+                    <span>Tarih: {new Date(selectedPost.createdAt).toLocaleDateString('tr-TR')}</span>
                   </div>
                   <div className="prose max-w-none">
                     <p className="text-gray-700 whitespace-pre-wrap">{selectedPost.content}</p>
                   </div>
+                  
+                  {/* Post Resimleri */}
+                  {selectedPost.images && selectedPost.images.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Post Resimleri</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {selectedPost.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={`http://localhost:3000${image}`}
+                              alt={`Post resmi ${index + 1}`}
+                              className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
+                              onError={(e) => {
+                                e.currentTarget.src = '/placeholder-image.jpg';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                              <button
+                                onClick={() => window.open(`http://localhost:3000${image}`, '_blank')}
+                                className="opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                              >
+                                <Eye className="h-4 w-4 mr-1 inline" />
+                                Büyüt
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {selectedPost.tags.length > 0 && (
+                {selectedPost.tags && selectedPost.tags.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 mb-2">Etiketler</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedPost.tags.map((tag) => (
+                      {selectedPost.tags.map((tag, index) => (
                         <span
-                          key={tag}
+                          key={index}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
                         >
                           {tag}
@@ -282,30 +613,120 @@ export default function PostsPage() {
                   </div>
                 )}
 
-                {selectedPost.status === 'pending' && (
-                  <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                {/* Post İstatistikleri */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center">
+                      <Heart className="h-4 w-4 text-red-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">{selectedPost.likes?.length || 0}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">Beğeni</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center">
+                      <Eye className="h-4 w-4 text-blue-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">{selectedPost.views || 0}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">Görüntülenme</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center">
+                      <MessageSquare className="h-4 w-4 text-green-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">{selectedPost.dislikes?.length || 0}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">Beğenmeme</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center">
+                      <AlertTriangle className="h-4 w-4 text-orange-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">{selectedPost.reportCount || 0}</span>
+                    </div>
+                    <p className="text-xs text-gray-600">Rapor</p>
+                  </div>
+                </div>
+
+                {/* Post Özellikleri */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-900">Post Özellikleri</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPost.isAnonymous && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Anonim
+                      </span>
+                    )}
+                    {selectedPost.isSensitive && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Hassas İçerik
+                      </span>
+                    )}
+                    {selectedPost.medicalAdvice && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Tıbbi Tavsiye
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Comments Modal */}
+        {showCommentsModal && selectedPostForComments && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Yorum Yönetimi
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      "{selectedPostForComments.title}" başlıklı post'un yorumları
+                    </p>
+                  </div>
                     <button
                       onClick={() => {
-                        handleReject(selectedPost);
-                        setShowDetailModal(false);
+                      setShowCommentsModal(false);
+                      setSelectedPostForComments(null);
                       }}
-                      className="inline-flex items-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+                    className="text-gray-400 hover:text-gray-600"
                     >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reddet
+                    <XCircle className="h-6 w-6" />
                     </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Comments Error Alert */}
+                {commentsError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                        <div>
+                          <h3 className="text-sm font-medium text-red-800">Hata</h3>
+                          <p className="text-sm text-red-700 mt-1">{commentsError}</p>
+                        </div>
+                      </div>
                     <button
-                      onClick={() => {
-                        handleApprove(selectedPost);
-                        setShowDetailModal(false);
-                      }}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Onayla
+                        onClick={clearCommentsError}
+                        className="text-red-400 hover:text-red-600"
+                      >
+                        <XCircle className="h-5 w-5" />
                     </button>
+                    </div>
                   </div>
                 )}
+
+                {/* Comments Table */}
+                <CommentsTable
+                  comments={comments}
+                  loading={commentsLoading}
+                  onDelete={handleDeleteComment}
+                />
               </div>
             </div>
           </div>

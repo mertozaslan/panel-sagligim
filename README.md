@@ -51,7 +51,7 @@ Modern ve kullanıcı dostu sağlık platformu yönetim paneli. Next.js, TypeScr
 
 3. **Tarayıcınızda açın:**
    ```
-   https://api.saglikhep.com
+   http://localhost:3000
    ```
 
 ## 🏗️ Proje Yapısı
