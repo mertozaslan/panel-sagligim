@@ -149,7 +149,7 @@ export default function UserTable({ users, onViewUser, onEditUser, onDeleteUser 
                           src={
                             user.profilePicture.startsWith('http') 
                               ? user.profilePicture 
-                              : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'http://localhost:3000'}${user.profilePicture}`
+                              : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.saglikhep.com'}${user.profilePicture}`
                           } 
                           alt={`${user.firstName} ${user.lastName}`}
                           width={40}
@@ -266,7 +266,7 @@ export default function UserTable({ users, onViewUser, onEditUser, onDeleteUser 
                         src={
                           selectedUser.profilePicture.startsWith('http') 
                             ? selectedUser.profilePicture 
-                            : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'http://localhost:3000'}${selectedUser.profilePicture}`
+                            : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.saglikhep.com'}${selectedUser.profilePicture}`
                         } 
                         alt={`${selectedUser.firstName} ${selectedUser.lastName}`}
                         width={64}

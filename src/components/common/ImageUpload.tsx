@@ -93,7 +93,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 src={
                   preview.startsWith('http') || preview.startsWith('data:')
                     ? preview
-                    : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'http://localhost:3000'}${preview}`
+                    : `${process.env.NEXT_PUBLIC_IMAGE_URL || 'https://api.saglikhep.com'}${preview}`
                 }
                 alt="Preview"
                 fill

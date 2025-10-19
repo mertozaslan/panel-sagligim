@@ -4,7 +4,7 @@ Bu dokümantasyon, SaglikHep API'sinin kullanıcı yönetimi endpoint'lerini aç
 
 ## Base URL
 ```
-http://localhost:3000/api/users
+https://api.saglikhep.com/api/users
 ```
 
 ## Endpoint'ler
@@ -54,7 +54,7 @@ Authorization: Bearer <jwt_token>
 const getAllUsers = async (page = 1, limit = 10) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3000/api/users?page=${page}&limit=${limit}`, {
+    const response = await fetch(`https://api.saglikhep.com/api/users?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -114,7 +114,7 @@ Kullanıcıları arama yapar.
 ```javascript
 const searchUsers = async (searchTerm, page = 1) => {
   try {
-    const response = await fetch(`http://localhost:3000/api/users/search?q=${encodeURIComponent(searchTerm)}&page=${page}`, {
+    const response = await fetch(`https://api.saglikhep.com/api/users/search?q=${encodeURIComponent(searchTerm)}&page=${page}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ Belirli bir kullanıcının detay bilgilerini getirir.
 ```javascript
 const getUserById = async (userId) => {
   try {
-    const response = await fetch(`http://localhost:3000/api/users/${userId}`, {
+    const response = await fetch(`https://api.saglikhep.com/api/users/${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ Kullanıcının istatistik bilgilerini getirir.
 ```javascript
 const getUserStats = async (userId) => {
   try {
-    const response = await fetch(`http://localhost:3000/api/users/${userId}/stats`, {
+    const response = await fetch(`https://api.saglikhep.com/api/users/${userId}/stats`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -282,7 +282,7 @@ Authorization: Bearer <jwt_token>
 const updateProfile = async (profileData) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:3000/api/users/profile', {
+    const response = await fetch('https://api.saglikhep.com/api/users/profile', {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -330,7 +330,7 @@ Authorization: Bearer <jwt_token>
 const toggleFollow = async (userId) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3000/api/users/${userId}/follow`, {
+    const response = await fetch(`https://api.saglikhep.com/api/users/${userId}/follow`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -397,7 +397,7 @@ Authorization: Bearer <jwt_token>
 const addMedicalCondition = async (conditionData) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:3000/api/users/medical-conditions', {
+    const response = await fetch('https://api.saglikhep.com/api/users/medical-conditions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -443,7 +443,7 @@ Authorization: Bearer <jwt_token>
 const removeMedicalCondition = async (conditionId) => {
   try {
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3000/api/users/medical-conditions/${conditionId}`, {
+    const response = await fetch(`https://api.saglikhep.com/api/users/medical-conditions/${conditionId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,

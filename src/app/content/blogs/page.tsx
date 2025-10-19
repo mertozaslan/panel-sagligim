@@ -605,7 +605,7 @@ export default function BlogsPage() {
         {loading ? (
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-health-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Blog'lar yükleniyor...</p>
+            <p className="mt-2 text-gray-600">Blog&apos;lar yükleniyor...</p>
         </div>
         ) : (
           <ContentModerationTable
@@ -1068,7 +1068,7 @@ export default function BlogsPage() {
                         {selectedBlog.images.map((image, index) => (
                           <div key={index} className="relative group">
                             <img
-                              src={`http://localhost:3000${image}`}
+                              src={`https://api.saglikhep.com${image}`}
                               alt={`Blog resmi ${index + 1}`}
                               className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
                               onError={(e) => {
@@ -1077,7 +1077,7 @@ export default function BlogsPage() {
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
                               <button
-                                onClick={() => window.open(`http://localhost:3000${image}`, '_blank')}
+                                onClick={() => window.open(`https://api.saglikhep.com${image}`, '_blank')}
                                 className="opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-800 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                               >
                                 <Eye className="h-4 w-4 mr-1 inline" />
@@ -1176,7 +1176,7 @@ export default function BlogsPage() {
                       Yorum Yönetimi
                   </h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      "{selectedBlogForComments.title}" başlıklı blog'un yorumları
+                      &quot;{selectedBlogForComments.title}&quot; başlıklı blog&apos;un yorumları
                     </p>
                   </div>
                   <button

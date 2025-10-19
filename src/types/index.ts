@@ -184,7 +184,7 @@ export interface Comment {
   isReported: boolean;
   reportCount: number;
   parentComment?: string;
-  replies: string[];
+  replies?: string[];
   isHelpful: boolean;
   medicalAdvice: boolean;
   createdAt: Date;
@@ -385,15 +385,21 @@ export interface Comment {
   id: string;
   content: string;
   authorId: string;
-  author: User;
+  author: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture?: string;
+  };
   postId?: string;
   questionId?: string;
   parentId?: string; // for replies
   status: ContentStatus;
   createdAt: Date;
   updatedAt: Date;
-  likes: number;
-  replies?: Comment[];
+  likes: string[];
+  replies?: string[];
 }
 
 export type ContentCategory = 
