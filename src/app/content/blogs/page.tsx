@@ -303,7 +303,7 @@ export default function BlogsPage() {
   };
 
   const handleCreate = async () => {
-    // Client-side validasyon
+    // Client-side validasyon - API kurallarına göre
     if (!creatingBlog.title?.trim()) {
       Swal.fire({
         title: 'Başlık Gerekli!',
@@ -321,10 +321,10 @@ export default function BlogsPage() {
       return;
     }
     
-    if (creatingBlog.title!.length < 5) {
+    if (creatingBlog.title!.length < 5 || creatingBlog.title!.length > 200) {
       Swal.fire({
-        title: 'Başlık Çok Kısa!',
-        html: 'Blog başlığı en az 5 karakter olmalı!',
+        title: 'Başlık Uzunluk Hatası!',
+        html: 'Blog başlığı 5-200 karakter arasında olmalı!',
         icon: 'error',
         confirmButtonText: 'Tamam',
         background: '#ffffff',
@@ -355,10 +355,178 @@ export default function BlogsPage() {
       return;
     }
     
-    if (creatingBlog.content!.length < 50) {
+    if (creatingBlog.content!.length < 100 || creatingBlog.content!.length > 10000) {
       Swal.fire({
-        title: 'İçerik Çok Kısa!',
-        html: 'Blog içeriği en az 50 karakter olmalı!',
+        title: 'İçerik Uzunluk Hatası!',
+        html: 'Blog içeriği 100-10000 karakter arasında olmalı!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Özet validasyonu
+    if (creatingBlog.excerpt && creatingBlog.excerpt.length > 500) {
+      Swal.fire({
+        title: 'Özet Uzunluk Hatası!',
+        html: 'Özet en fazla 500 karakter olabilir!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Etiket validasyonu
+    if (creatingBlog.tags && creatingBlog.tags.length > 15) {
+      Swal.fire({
+        title: 'Etiket Sayısı Hatası!',
+        html: 'En fazla 15 etiket ekleyebilirsiniz!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Etiket uzunluk validasyonu
+    if (creatingBlog.tags && creatingBlog.tags.some(tag => tag.length < 1 || tag.length > 50)) {
+      Swal.fire({
+        title: 'Etiket Uzunluk Hatası!',
+        html: 'Etiketler 1-50 karakter arasında olmalı!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Resim sayısı validasyonu
+    if (creatingBlog.images && creatingBlog.images.length > 10) {
+      Swal.fire({
+        title: 'Resim Sayısı Hatası!',
+        html: 'En fazla 10 resim ekleyebilirsiniz!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Tıbbi uyarı validasyonu
+    if (creatingBlog.medicalDisclaimer && creatingBlog.medicalDisclaimer.length > 1000) {
+      Swal.fire({
+        title: 'Tıbbi Uyarı Uzunluk Hatası!',
+        html: 'Tıbbi uyarı en fazla 1000 karakter olabilir!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Kaynak sayısı validasyonu
+    if (creatingBlog.references && creatingBlog.references.length > 20) {
+      Swal.fire({
+        title: 'Kaynak Sayısı Hatası!',
+        html: 'En fazla 20 kaynak ekleyebilirsiniz!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Kaynak uzunluk validasyonu
+    if (creatingBlog.references && creatingBlog.references.length > 0) {
+      const hasInvalidReference = creatingBlog.references.some(ref => 
+        ref.title.length < 1 || ref.title.length > 200
+      );
+      
+      if (hasInvalidReference) {
+        Swal.fire({
+          title: 'Kaynak Uzunluk Hatası!',
+          html: 'Kaynaklar 1-200 karakter arasında olmalı!',
+          icon: 'error',
+          confirmButtonText: 'Tamam',
+          background: '#ffffff',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            title: 'text-gray-800 font-semibold text-xl',
+            htmlContainer: 'text-gray-600',
+            confirmButton: 'rounded-xl px-6 py-3 font-medium'
+          }
+        });
+        return;
+      }
+    }
+
+    // SEO başlık validasyonu
+    if (creatingBlog.seoTitle && creatingBlog.seoTitle.length > 60) {
+      Swal.fire({
+        title: 'SEO Başlık Uzunluk Hatası!',
+        html: 'SEO başlığı en fazla 60 karakter olabilir!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // SEO açıklama validasyonu
+    if (creatingBlog.seoDescription && creatingBlog.seoDescription.length > 160) {
+      Swal.fire({
+        title: 'SEO Açıklama Uzunluk Hatası!',
+        html: 'SEO açıklaması en fazla 160 karakter olabilir!',
         icon: 'error',
         confirmButtonText: 'Tamam',
         background: '#ffffff',
@@ -838,14 +1006,14 @@ export default function BlogsPage() {
                 {/* Başlık */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Başlık * ({creatingBlog.title?.length || 0}/100)
+                    Başlık * ({creatingBlog.title?.length || 0}/200)
                   </label>
                   <input
                     type="text"
                     value={creatingBlog.title || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, title: e.target.value})}
                     placeholder="Blog yazınıza çekici bir başlık ver..."
-                    maxLength={100}
+                    maxLength={200}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-green-50 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none transition-all text-lg font-medium"
                   />
                 </div>
@@ -853,14 +1021,14 @@ export default function BlogsPage() {
                 {/* Özet */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Özet ({creatingBlog.excerpt?.length || 0}/200)
+                    Özet ({creatingBlog.excerpt?.length || 0}/500)
                   </label>
                   <textarea
                     value={creatingBlog.excerpt || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, excerpt: e.target.value})}
                     placeholder="Blog yazınızın kısa özetini yazın..."
                     rows={2}
-                    maxLength={200}
+                    maxLength={500}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-green-50 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none resize-none transition-all text-base leading-relaxed"
                   />
                 </div>
@@ -868,14 +1036,14 @@ export default function BlogsPage() {
                 {/* İçerik */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    İçerik * ({creatingBlog.content?.length || 0}/5000)
+                    İçerik * ({creatingBlog.content?.length || 0}/10000)
                   </label>
                   <textarea
                     value={creatingBlog.content || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, content: e.target.value})}
                     placeholder="Blog yazınızın detaylı içeriğini yazın..."
                     rows={8}
-                    maxLength={5000}
+                    maxLength={10000}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-green-50 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none resize-none transition-all text-base leading-relaxed"
                   />
                 </div>
@@ -942,12 +1110,15 @@ export default function BlogsPage() {
 
                 {/* Tıbbi Uyarı */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tıbbi Uyarı</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tıbbi Uyarı ({creatingBlog.medicalDisclaimer?.length || 0}/1000)
+                  </label>
                   <textarea
                     value={creatingBlog.medicalDisclaimer || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, medicalDisclaimer: e.target.value})}
                     placeholder="Bu içerik hakkında tıbbi uyarı metni yazın..."
                     rows={3}
+                    maxLength={1000}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-yellow-50 border-2 border-gray-200 rounded-2xl focus:border-yellow-500 focus:outline-none resize-none transition-all text-base leading-relaxed"
                   />
             </div>
@@ -955,7 +1126,7 @@ export default function BlogsPage() {
                 {/* Etiketler */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Etiketler (virgülle ayırın)
+                    Etiketler (virgülle ayırın) - Max 15 etiket
                   </label>
                   <input
                     type="text"
@@ -965,6 +1136,37 @@ export default function BlogsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
                   />
         </div>
+
+                {/* SEO Alanları */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SEO Başlık ({creatingBlog.seoTitle?.length || 0}/60)
+                    </label>
+                    <input
+                      type="text"
+                      value={creatingBlog.seoTitle || ''}
+                      onChange={(e) => setCreatingBlog({...creatingBlog, seoTitle: e.target.value})}
+                      placeholder="SEO için optimize edilmiş başlık..."
+                      maxLength={60}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SEO Açıklama ({creatingBlog.seoDescription?.length || 0}/160)
+                    </label>
+                    <textarea
+                      value={creatingBlog.seoDescription || ''}
+                      onChange={(e) => setCreatingBlog({...creatingBlog, seoDescription: e.target.value})}
+                      placeholder="SEO için optimize edilmiş açıklama..."
+                      rows={2}
+                      maxLength={160}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500 resize-none"
+                    />
+                  </div>
+                </div>
 
                 {/* Blog Özellikleri */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
