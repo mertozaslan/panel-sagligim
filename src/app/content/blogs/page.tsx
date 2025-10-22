@@ -67,11 +67,8 @@ export default function BlogsPage() {
     tags: [],
     images: [],
     isPublished: false,
-    isFeatured: false,
     medicalDisclaimer: '',
     references: [],
-    seoTitle: '',
-    seoDescription: '',
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -504,41 +501,6 @@ export default function BlogsPage() {
       }
     }
 
-    // SEO başlık validasyonu
-    if (creatingBlog.seoTitle && creatingBlog.seoTitle.length > 60) {
-      Swal.fire({
-        title: 'SEO Başlık Uzunluk Hatası!',
-        html: 'SEO başlığı en fazla 60 karakter olabilir!',
-        icon: 'error',
-        confirmButtonText: 'Tamam',
-        background: '#ffffff',
-        customClass: {
-          popup: 'rounded-2xl shadow-2xl',
-          title: 'text-gray-800 font-semibold text-xl',
-          htmlContainer: 'text-gray-600',
-          confirmButton: 'rounded-xl px-6 py-3 font-medium'
-        }
-      });
-      return;
-    }
-
-    // SEO açıklama validasyonu
-    if (creatingBlog.seoDescription && creatingBlog.seoDescription.length > 160) {
-      Swal.fire({
-        title: 'SEO Açıklama Uzunluk Hatası!',
-        html: 'SEO açıklaması en fazla 160 karakter olabilir!',
-        icon: 'error',
-        confirmButtonText: 'Tamam',
-        background: '#ffffff',
-        customClass: {
-          popup: 'rounded-2xl shadow-2xl',
-          title: 'text-gray-800 font-semibold text-xl',
-          htmlContainer: 'text-gray-600',
-          confirmButton: 'rounded-xl px-6 py-3 font-medium'
-        }
-      });
-      return;
-    }
 
     try {
       await createBlog({
@@ -549,11 +511,8 @@ export default function BlogsPage() {
         tags: creatingBlog.tags || [],
         images: creatingBlog.images || [],
         isPublished: creatingBlog.isPublished || false,
-        isFeatured: creatingBlog.isFeatured || false,
         medicalDisclaimer: creatingBlog.medicalDisclaimer,
         references: creatingBlog.references || [],
-        seoTitle: creatingBlog.seoTitle,
-        seoDescription: creatingBlog.seoDescription,
       });
       
       // Blogs listesini yeniden fetch et
@@ -568,11 +527,8 @@ export default function BlogsPage() {
         tags: [],
         images: [],
         isPublished: false,
-        isFeatured: false,
         medicalDisclaimer: '',
         references: [],
-        seoTitle: '',
-        seoDescription: '',
       });
       setSelectedFile(null);
       
@@ -1137,78 +1093,26 @@ export default function BlogsPage() {
                   />
         </div>
 
-                {/* SEO Alanları */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      SEO Başlık ({creatingBlog.seoTitle?.length || 0}/60)
-                    </label>
-                    <input
-                      type="text"
-                      value={creatingBlog.seoTitle || ''}
-                      onChange={(e) => setCreatingBlog({...creatingBlog, seoTitle: e.target.value})}
-                      placeholder="SEO için optimize edilmiş başlık..."
-                      maxLength={60}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      SEO Açıklama ({creatingBlog.seoDescription?.length || 0}/160)
-                    </label>
-                    <textarea
-                      value={creatingBlog.seoDescription || ''}
-                      onChange={(e) => setCreatingBlog({...creatingBlog, seoDescription: e.target.value})}
-                      placeholder="SEO için optimize edilmiş açıklama..."
-                      rows={2}
-                      maxLength={160}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-health-500 resize-none"
-                    />
-                  </div>
-                </div>
 
                 {/* Blog Özellikleri */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={creatingBlog.isPublished || false}
-                        onChange={(e) => setCreatingBlog({...creatingBlog, isPublished: e.target.checked})}
-                        className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                            <FileText className="h-4 w-4 text-green-600" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">Yayınlandı</span>
+                <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={creatingBlog.isPublished || false}
+                      onChange={(e) => setCreatingBlog({...creatingBlog, isPublished: e.target.checked})}
+                      className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-green-600" />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Blog yayında görünür</p>
+                        <span className="text-sm font-medium text-gray-900">Yayınlandı</span>
                       </div>
-                    </label>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={creatingBlog.isFeatured || false}
-                        onChange={(e) => setCreatingBlog({...creatingBlog, isFeatured: e.target.checked})}
-                        className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                            <Heart className="h-4 w-4 text-yellow-600" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">Öne Çıkan</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Ana sayfada öne çıkar</p>
-                      </div>
-                    </label>
-                  </div>
+                      <p className="text-xs text-gray-500 mt-1">Blog yayında görünür</p>
+                    </div>
+                  </label>
                 </div>
 
                 {/* Butonlar */}
