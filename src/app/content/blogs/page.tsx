@@ -7,6 +7,7 @@ import CommentsTable from '@/components/content/CommentsTable';
 import { Blog, BlogCategory, Comment } from '@/types';
 import { useBlogsStore } from '@/stores/blogsStore';
 import { useCommentsStore } from '@/stores/commentsStore';
+import { uploadService } from '@/services/upload';
 import { Search, XCircle, Eye, Heart, MessageSquare, AlertTriangle, MessageCircle, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -67,11 +68,8 @@ export default function BlogsPage() {
     tags: [],
     images: [],
     isPublished: false,
-    isFeatured: false,
     medicalDisclaimer: '',
     references: [],
-    seoTitle: '',
-    seoDescription: '',
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -194,8 +192,8 @@ export default function BlogsPage() {
     fetchCommentsByPost(blogWithId.id, { postType: 'Blog' });
   };
 
-  // Dosya seçimi
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Dosya seçimi ve otomatik yükleme
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -236,37 +234,16 @@ export default function BlogsPage() {
     }
     
     setSelectedFile(file);
-    Swal.fire({
-      title: 'Resim Seçildi!',
-      html: 'Resim başarıyla seçildi. Yüklemek için "Yükle" butonuna tıklayın.',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false,
-      background: '#ffffff',
-      customClass: {
-        popup: 'rounded-2xl shadow-2xl',
-        title: 'text-gray-800 font-semibold text-xl',
-        htmlContainer: 'text-gray-600'
-      }
-    });
-  };
-
-  // Resim yükleme
-  const handleUploadImage = async () => {
-    if (!selectedFile) return;
     
+    // Otomatik yükleme
     setIsUploadingImage(true);
     try {
-      // Burada gerçek upload servisi kullanılacak
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      
-      // Mock upload - gerçek implementasyonda uploadService kullanılacak
-      const mockImageUrl = `/uploads/${Date.now()}-${selectedFile.name}`;
+      // Gerçek upload servisi kullan
+      const uploadResponse = await uploadService.uploadSingle(file);
       
       setCreatingBlog(prev => ({
         ...prev,
-        images: [...(prev.images || []), mockImageUrl]
+        images: [...(prev.images || []), uploadResponse.imageUrl]
       }));
       
       setSelectedFile(null);
@@ -284,6 +261,7 @@ export default function BlogsPage() {
         }
       });
     } catch (error) {
+      console.error('Upload error:', error);
       Swal.fire({
         title: 'Yükleme Hatası!',
         html: 'Resim yüklenirken bir hata oluştu!',
@@ -302,8 +280,9 @@ export default function BlogsPage() {
     }
   };
 
+
   const handleCreate = async () => {
-    // Client-side validasyon
+    // Client-side validasyon - API kurallarına göre
     if (!creatingBlog.title?.trim()) {
       Swal.fire({
         title: 'Başlık Gerekli!',
@@ -321,10 +300,10 @@ export default function BlogsPage() {
       return;
     }
     
-    if (creatingBlog.title!.length < 5) {
+    if (creatingBlog.title!.length < 5 || creatingBlog.title!.length > 200) {
       Swal.fire({
-        title: 'Başlık Çok Kısa!',
-        html: 'Blog başlığı en az 5 karakter olmalı!',
+        title: 'Başlık Uzunluk Hatası!',
+        html: 'Blog başlığı 5-200 karakter arasında olmalı!',
         icon: 'error',
         confirmButtonText: 'Tamam',
         background: '#ffffff',
@@ -355,10 +334,10 @@ export default function BlogsPage() {
       return;
     }
     
-    if (creatingBlog.content!.length < 50) {
+    if (creatingBlog.content!.length < 100 || creatingBlog.content!.length > 10000) {
       Swal.fire({
-        title: 'İçerik Çok Kısa!',
-        html: 'Blog içeriği en az 50 karakter olmalı!',
+        title: 'İçerik Uzunluk Hatası!',
+        html: 'Blog içeriği 100-10000 karakter arasında olmalı!',
         icon: 'error',
         confirmButtonText: 'Tamam',
         background: '#ffffff',
@@ -372,6 +351,139 @@ export default function BlogsPage() {
       return;
     }
 
+    // Özet validasyonu
+    if (creatingBlog.excerpt && creatingBlog.excerpt.length > 500) {
+      Swal.fire({
+        title: 'Özet Uzunluk Hatası!',
+        html: 'Özet en fazla 500 karakter olabilir!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Etiket validasyonu
+    if (creatingBlog.tags && creatingBlog.tags.length > 15) {
+      Swal.fire({
+        title: 'Etiket Sayısı Hatası!',
+        html: 'En fazla 15 etiket ekleyebilirsiniz!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Etiket uzunluk validasyonu
+    if (creatingBlog.tags && creatingBlog.tags.some(tag => tag.length < 1 || tag.length > 50)) {
+      Swal.fire({
+        title: 'Etiket Uzunluk Hatası!',
+        html: 'Etiketler 1-50 karakter arasında olmalı!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Resim sayısı validasyonu
+    if (creatingBlog.images && creatingBlog.images.length > 10) {
+      Swal.fire({
+        title: 'Resim Sayısı Hatası!',
+        html: 'En fazla 10 resim ekleyebilirsiniz!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Tıbbi uyarı validasyonu
+    if (creatingBlog.medicalDisclaimer && creatingBlog.medicalDisclaimer.length > 1000) {
+      Swal.fire({
+        title: 'Tıbbi Uyarı Uzunluk Hatası!',
+        html: 'Tıbbi uyarı en fazla 1000 karakter olabilir!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Kaynak sayısı validasyonu
+    if (creatingBlog.references && creatingBlog.references.length > 20) {
+      Swal.fire({
+        title: 'Kaynak Sayısı Hatası!',
+        html: 'En fazla 20 kaynak ekleyebilirsiniz!',
+        icon: 'error',
+        confirmButtonText: 'Tamam',
+        background: '#ffffff',
+        customClass: {
+          popup: 'rounded-2xl shadow-2xl',
+          title: 'text-gray-800 font-semibold text-xl',
+          htmlContainer: 'text-gray-600',
+          confirmButton: 'rounded-xl px-6 py-3 font-medium'
+        }
+      });
+      return;
+    }
+
+    // Kaynak uzunluk validasyonu
+    if (creatingBlog.references && creatingBlog.references.length > 0) {
+      const hasInvalidReference = creatingBlog.references.some(ref => 
+        ref.title.length < 1 || ref.title.length > 200
+      );
+      
+      if (hasInvalidReference) {
+        Swal.fire({
+          title: 'Kaynak Uzunluk Hatası!',
+          html: 'Kaynaklar 1-200 karakter arasında olmalı!',
+          icon: 'error',
+          confirmButtonText: 'Tamam',
+          background: '#ffffff',
+          customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            title: 'text-gray-800 font-semibold text-xl',
+            htmlContainer: 'text-gray-600',
+            confirmButton: 'rounded-xl px-6 py-3 font-medium'
+          }
+        });
+        return;
+      }
+    }
+
+
     try {
       await createBlog({
         title: creatingBlog.title!,
@@ -381,11 +493,8 @@ export default function BlogsPage() {
         tags: creatingBlog.tags || [],
         images: creatingBlog.images || [],
         isPublished: creatingBlog.isPublished || false,
-        isFeatured: creatingBlog.isFeatured || false,
         medicalDisclaimer: creatingBlog.medicalDisclaimer,
         references: creatingBlog.references || [],
-        seoTitle: creatingBlog.seoTitle,
-        seoDescription: creatingBlog.seoDescription,
       });
       
       // Blogs listesini yeniden fetch et
@@ -400,11 +509,8 @@ export default function BlogsPage() {
         tags: [],
         images: [],
         isPublished: false,
-        isFeatured: false,
         medicalDisclaimer: '',
         references: [],
-        seoTitle: '',
-        seoDescription: '',
       });
       setSelectedFile(null);
       
@@ -838,14 +944,14 @@ export default function BlogsPage() {
                 {/* Başlık */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Başlık * ({creatingBlog.title?.length || 0}/100)
+                    Başlık * ({creatingBlog.title?.length || 0}/200)
                   </label>
                   <input
                     type="text"
                     value={creatingBlog.title || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, title: e.target.value})}
                     placeholder="Blog yazınıza çekici bir başlık ver..."
-                    maxLength={100}
+                    maxLength={200}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-green-50 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none transition-all text-lg font-medium"
                   />
                 </div>
@@ -853,14 +959,14 @@ export default function BlogsPage() {
                 {/* Özet */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Özet ({creatingBlog.excerpt?.length || 0}/200)
+                    Özet ({creatingBlog.excerpt?.length || 0}/500)
                   </label>
                   <textarea
                     value={creatingBlog.excerpt || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, excerpt: e.target.value})}
                     placeholder="Blog yazınızın kısa özetini yazın..."
                     rows={2}
-                    maxLength={200}
+                    maxLength={500}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-green-50 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none resize-none transition-all text-base leading-relaxed"
                   />
                 </div>
@@ -868,14 +974,14 @@ export default function BlogsPage() {
                 {/* İçerik */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    İçerik * ({creatingBlog.content?.length || 0}/5000)
+                    İçerik * ({creatingBlog.content?.length || 0}/10000)
                   </label>
                   <textarea
                     value={creatingBlog.content || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, content: e.target.value})}
                     placeholder="Blog yazınızın detaylı içeriğini yazın..."
                     rows={8}
-                    maxLength={5000}
+                    maxLength={10000}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-green-50 border-2 border-gray-200 rounded-2xl focus:border-green-500 focus:outline-none resize-none transition-all text-base leading-relaxed"
                   />
                 </div>
@@ -902,19 +1008,12 @@ export default function BlogsPage() {
                       </div>
                     </label>
                     
-                    {selectedFile && (
-                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                    {isUploadingImage && (
+                      <div className="flex items-center justify-center p-3 bg-blue-50 border border-blue-200 rounded-xl">
                         <div className="flex items-center space-x-3">
-                          <div className="text-green-600">✅</div>
-                          <span className="text-sm font-medium text-green-800">{selectedFile.name}</span>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="text-sm font-medium text-blue-800">Resim yükleniyor...</span>
                         </div>
-                          <button
-                          onClick={handleUploadImage}
-                          disabled={isUploadingImage}
-                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                        >
-                          {isUploadingImage ? 'Yükleniyor...' : 'Yükle'}
-                          </button>
                       </div>
                     )}
 
@@ -942,12 +1041,15 @@ export default function BlogsPage() {
 
                 {/* Tıbbi Uyarı */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tıbbi Uyarı</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tıbbi Uyarı ({creatingBlog.medicalDisclaimer?.length || 0}/1000)
+                  </label>
                   <textarea
                     value={creatingBlog.medicalDisclaimer || ''}
                     onChange={(e) => setCreatingBlog({...creatingBlog, medicalDisclaimer: e.target.value})}
                     placeholder="Bu içerik hakkında tıbbi uyarı metni yazın..."
                     rows={3}
+                    maxLength={1000}
                     className="w-full p-4 bg-gradient-to-r from-gray-50 to-yellow-50 border-2 border-gray-200 rounded-2xl focus:border-yellow-500 focus:outline-none resize-none transition-all text-base leading-relaxed"
                   />
             </div>
@@ -955,7 +1057,7 @@ export default function BlogsPage() {
                 {/* Etiketler */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Etiketler (virgülle ayırın)
+                    Etiketler (virgülle ayırın) - Max 15 etiket
                   </label>
                   <input
                     type="text"
@@ -966,47 +1068,26 @@ export default function BlogsPage() {
                   />
         </div>
 
-                {/* Blog Özellikleri */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={creatingBlog.isPublished || false}
-                        onChange={(e) => setCreatingBlog({...creatingBlog, isPublished: e.target.checked})}
-                        className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                            <FileText className="h-4 w-4 text-green-600" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">Yayınlandı</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Blog yayında görünür</p>
-                      </div>
-                    </label>
-                  </div>
 
-                  <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={creatingBlog.isFeatured || false}
-                        onChange={(e) => setCreatingBlog({...creatingBlog, isFeatured: e.target.checked})}
-                        className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                            <Heart className="h-4 w-4 text-yellow-600" />
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">Öne Çıkan</span>
+                {/* Blog Özellikleri */}
+                <div className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={creatingBlog.isPublished || false}
+                      onChange={(e) => setCreatingBlog({...creatingBlog, isPublished: e.target.checked})}
+                      className="mt-1 h-4 w-4 text-health-600 focus:ring-health-500 border-gray-300 rounded"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-green-600" />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Ana sayfada öne çıkar</p>
+                        <span className="text-sm font-medium text-gray-900">Yayınlandı</span>
                       </div>
-                    </label>
-                  </div>
+                      <p className="text-xs text-gray-500 mt-1">Blog yayında görünür</p>
+                    </div>
+                  </label>
                 </div>
 
                 {/* Butonlar */}
