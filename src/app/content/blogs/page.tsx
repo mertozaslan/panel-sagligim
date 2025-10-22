@@ -7,6 +7,7 @@ import CommentsTable from '@/components/content/CommentsTable';
 import { Blog, BlogCategory, Comment } from '@/types';
 import { useBlogsStore } from '@/stores/blogsStore';
 import { useCommentsStore } from '@/stores/commentsStore';
+import { uploadService } from '@/services/upload';
 import { Search, XCircle, Eye, Heart, MessageSquare, AlertTriangle, MessageCircle, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -191,8 +192,8 @@ export default function BlogsPage() {
     fetchCommentsByPost(blogWithId.id, { postType: 'Blog' });
   };
 
-  // Dosya seçimi
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Dosya seçimi ve otomatik yükleme
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -233,37 +234,16 @@ export default function BlogsPage() {
     }
     
     setSelectedFile(file);
-    Swal.fire({
-      title: 'Resim Seçildi!',
-      html: 'Resim başarıyla seçildi. Yüklemek için "Yükle" butonuna tıklayın.',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false,
-      background: '#ffffff',
-      customClass: {
-        popup: 'rounded-2xl shadow-2xl',
-        title: 'text-gray-800 font-semibold text-xl',
-        htmlContainer: 'text-gray-600'
-      }
-    });
-  };
-
-  // Resim yükleme
-  const handleUploadImage = async () => {
-    if (!selectedFile) return;
     
+    // Otomatik yükleme
     setIsUploadingImage(true);
     try {
-      // Burada gerçek upload servisi kullanılacak
-      const formData = new FormData();
-      formData.append('image', selectedFile);
-      
-      // Mock upload - gerçek implementasyonda uploadService kullanılacak
-      const mockImageUrl = `/uploads/${Date.now()}-${selectedFile.name}`;
+      // Gerçek upload servisi kullan
+      const uploadResponse = await uploadService.uploadSingle(file);
       
       setCreatingBlog(prev => ({
         ...prev,
-        images: [...(prev.images || []), mockImageUrl]
+        images: [...(prev.images || []), uploadResponse.imageUrl]
       }));
       
       setSelectedFile(null);
@@ -281,6 +261,7 @@ export default function BlogsPage() {
         }
       });
     } catch (error) {
+      console.error('Upload error:', error);
       Swal.fire({
         title: 'Yükleme Hatası!',
         html: 'Resim yüklenirken bir hata oluştu!',
@@ -298,6 +279,7 @@ export default function BlogsPage() {
       setIsUploadingImage(false);
     }
   };
+
 
   const handleCreate = async () => {
     // Client-side validasyon - API kurallarına göre
@@ -1026,19 +1008,12 @@ export default function BlogsPage() {
                       </div>
                     </label>
                     
-                    {selectedFile && (
-                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-xl">
+                    {isUploadingImage && (
+                      <div className="flex items-center justify-center p-3 bg-blue-50 border border-blue-200 rounded-xl">
                         <div className="flex items-center space-x-3">
-                          <div className="text-green-600">✅</div>
-                          <span className="text-sm font-medium text-green-800">{selectedFile.name}</span>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span className="text-sm font-medium text-blue-800">Resim yükleniyor...</span>
                         </div>
-                          <button
-                          onClick={handleUploadImage}
-                          disabled={isUploadingImage}
-                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                        >
-                          {isUploadingImage ? 'Yükleniyor...' : 'Yükle'}
-                          </button>
                       </div>
                     )}
 
